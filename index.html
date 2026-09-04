@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Lantern Lake</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+</head>
+
+<body data-screen="boot">
+
+<!-- Host only: the lake is always drawn behind every host screen. -->
+<canvas id="stage" width="640" height="360" aria-hidden="true"></canvas>
+<div id="scrim" aria-hidden="true"></div>
+
+<section id="home" class="screen">
+  <div class="brand">
+    <svg class="lantern" viewBox="0 0 16 24" width="48" height="72" aria-hidden="true" shape-rendering="crispEdges">
+      <rect x="6" y="0" width="4" height="2" fill="#8b5a3c"/>
+      <rect x="4" y="2" width="8" height="2" fill="#5a3a2a"/>
+      <rect x="3" y="4" width="10" height="14" fill="#f0c04a"/>
+      <rect x="5" y="6" width="6" height="10" fill="#ffe680"/>
+      <rect x="7" y="8" width="2" height="4" fill="#fff6c8"/>
+      <rect x="3" y="4" width="1" height="14" fill="#5a3a2a"/>
+      <rect x="12" y="4" width="1" height="14" fill="#5a3a2a"/>
+      <rect x="4" y="18" width="8" height="2" fill="#5a3a2a"/>
+      <rect x="6" y="20" width="4" height="2" fill="#8b5a3c"/>
+    </svg>
+    <h1>Lantern Lake</h1>
+  </div>
+
+  <div class="home-grid">
+    <div class="host-column">
+      <button id="new-btn" class="primary">New lake</button>
+      <button id="solo-btn">Single player</button>
+      <ul id="saves" aria-label="Saved lakes"></ul>
+    </div>
+    <form id="join-form" class="join-column">
+      <label for="join-code">Room code</label>
+      <input id="join-code" class="field code-field" maxlength="4" autocomplete="off"
+             autocapitalize="characters" spellcheck="false" inputmode="text" placeholder="ABCD">
+      <button type="submit">Join</button>
+    </form>
+  </div>
+  <p id="home-status" role="status"></p>
+</section>
+
+<section id="name" class="screen">
+  <form id="name-form">
+    <label for="name-input">Your name</label>
+    <input id="name-input" class="field" maxlength="16" autocomplete="nickname" required>
+    <button type="submit" class="primary">Continue</button>
+  </form>
+</section>
+
+<section id="lobby" class="screen">
+  <div id="host-panel">
+    <div class="qr-frame">
+      <canvas id="qr" width="220" height="220" aria-label="Scan to join"></canvas>
+    </div>
+    <p class="code" id="room-code" aria-live="polite"></p>
+    <button id="copy-link" class="ghost">Copy link</button>
+    <p id="lobby-hint" class="hint">Scan to join</p>
+  </div>
+  <div class="roster-column">
+    <h2 id="lobby-title">Crew</h2>
+    <ul id="roster" aria-live="polite"></ul>
+    <button id="ready-btn">I'm ready</button>
+    <button id="start-btn" class="primary" disabled>Set sail</button>
+    <p id="lobby-status" role="status"></p>
+  </div>
+</section>
+
+<section id="game" class="screen">
+  <div id="toast" aria-live="polite"></div>
+
+  <!-- joiners: the phone controller -->
+  <div id="controller" hidden>
+    <div class="ctl-top">
+      <span id="ctl-name" class="ctl-name"></span>
+      <span id="ctl-gold" class="ctl-gold"></span>
+      <span id="ctl-hold" class="ctl-hold"></span>
+    </div>
+    <div class="ctl-mid">
+      <p id="ctl-prompt" class="ctl-prompt"></p>
+      <div id="ctl-reel" class="reel" hidden>
+        <div class="reel-track">
+          <div id="reel-zone" class="reel-zone"></div>
+          <div id="reel-fish" class="reel-fish"></div>
+        </div>
+        <div class="reel-meters">
+          <div class="meter"><div id="reel-prog" class="meter-fill prog"></div></div>
+          <div class="meter"><div id="reel-tension" class="meter-fill tension"></div></div>
+        </div>
+      </div>
+      <div id="ctl-power" class="power" hidden><div id="ctl-power-fill"></div></div>
+      <ul id="ctl-menu" class="ctl-menu" hidden></ul>
+    </div>
+    <div class="ctl-bottom">
+      <div id="stick" class="stick" aria-label="Joystick"><div id="stick-knob" class="stick-knob"></div></div>
+      <div class="buttons">
+        <button id="btn-back" class="btn-small" type="button">Back</button>
+        <button id="btn-b" class="btn-b" type="button">Pull</button>
+        <button id="btn-a" class="btn-a" type="button">Cast</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="intro" class="overlay" hidden>
+    <p id="intro-title"></p>
+    <p id="intro-stakes"></p>
+    <ul id="intro-players"></ul>
+    <p id="intro-count" aria-live="assertive"></p>
+  </div>
+</section>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
