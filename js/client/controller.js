@@ -30,7 +30,7 @@ export function createController(input) {
     const f = v.fishing;
     let prompt = '', hot = false;
     if (v.menu) prompt = '';
-    else if (!f) prompt = v.loc === 'lake' ? (v.prompt === 'Hold full' ? 'Hold full' : v.prompt === 'Dock' ? 'Dock here' : 'Ready to cast') : (v.prompt || 'Walk');
+    else if (!f) prompt = v.loc === 'lake' ? (v.prompt === 'Cast' ? 'Ready to cast' : v.prompt === 'Dock' ? 'Dock here' : v.prompt || 'Ready to cast') : (v.prompt || 'Walk');
     else if (f.stage === 'charging') prompt = 'Release';
     else if (f.stage === 'flying') prompt = '';
     else if (f.stage === 'waiting') prompt = 'Waiting';
@@ -79,7 +79,7 @@ export function createController(input) {
     el.jStats.textContent = page.caught
       ? `${stars}  Caught ${page.entry.n}, best ${page.entry.best} kg, worth ${page.entry.worth} g. First: ${page.first}.`
       : `${stars}  Not caught yet. ${page.hint}.`;
-    const rows = [['Where', list(info.zones)], ['When', `${list(info.seasons)}, ${info.time.toLowerCase()}`], ['Weather', list(info.weather)], ['Size', info.weight], ['Price', info.price], ['Fight', info.style]];
+    const rows = [['Where', `${info.water}: ${list(info.zones)}`], ['When', `${list(info.seasons)}, ${info.time.toLowerCase()}`], ['Weather', list(info.weather)], ['Size', info.weight], ['Price', info.price], ['Fight', info.style]];
     el.jInfo.innerHTML = '';
     for (const [k, v] of rows) { const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = v; el.jInfo.append(dt, dd); }
     el.jTotals.textContent = `${tot.species} of ${tot.total} species, ${tot.count} fish, ${j.earned} g earned` + (j.best ? `. Crew record: ${j.best.name} ${j.best.weight} kg (${j.best.by}).` : '.');
@@ -128,7 +128,7 @@ export function createController(input) {
       case 'nojournal': b(30); break;
       case 'sold': b([20, 20, 20, 20, 20]); break;
       case 'buy': b(25); break;
-      case 'nope': case 'holdfull': b(60); break;
+      case 'nope': case 'holdfull': case 'locked': b(60); break;
       case 'zone': b(5); break;
     }
   }

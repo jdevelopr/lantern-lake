@@ -503,7 +503,7 @@ function drawWindowView(G, state, win, sky) {
   // far hills, then water for the openings that look onto the lake
   const hy = y + h * (win.water ? 0.5 : 0.66);
   let hc = mix(HILL[season], '#1c2438', (1 - eff) * 0.85);
-  hc = mix(hc, '#7b8794', wx.sky * 0.3 + (wx.kind === 'fog' ? wx.k * 0.5 : 0));
+  hc = mix(hc, '#7b8794', wx.sky * 0.3);
   for (let xx = 0; xx < w; xx++) { const hh = 4 + Math.sin((xx + x) * 0.07) * 3 + Math.sin((xx + x) * 0.21) * 2; ctx.fillStyle = hc; ctx.fillRect(x + xx, R(hy - hh), 1, R(y + h - (hy - hh))); if (((xx + x) | 0) % 7 === 0) { const t = 2 + (hash(xx + x, 1) * 3 | 0); for (let k = 0; k < t; k++) ctx.fillRect(x + xx, R(hy - hh) - t + k, 1, 1); } }
   if (win.water) {
     const wy = y + h - win.water, wc = mix(WATER[season], '#101828', (1 - eff) * 0.8);
@@ -526,7 +526,6 @@ function drawWindowView(G, state, win, sky) {
     for (let i = 0, n = (w * h) / 50 * wx.k; i < n; i++) { const t = (clock * 0.12 * (0.6 + hash(i, 8)) + hash(i, 9, x)) % 1; ctx.fillRect(x + R((hash(i, 10, x) * w + Math.sin(clock + i) * 3 + w) % w), y + R(t * (h - 1)), 1, 1); }
   }
   if (season === 3) { ctx.fillStyle = '#e6ebef'; ctx.fillRect(x, y + h - 2, w, 2); ctx.fillStyle = ditherPattern(ctx, '#e6ebef', 0.5); ctx.fillRect(x, y + h - 4, w, 2); }
-  if (wx.kind === 'fog') { ctx.fillStyle = `rgba(174,182,192,${0.55 * wx.k})`; ctx.fillRect(x, y, w, h); }
   // glass: a diagonal sheen and the cross bar
   ctx.fillStyle = 'rgba(255,255,255,0.09)'; for (let i = 0; i < h; i++) ctx.fillRect(x + w - 4 - (i >> 1), y + i, 2, 1);
   if (win.bar) { ctx.fillStyle = '#1a1712'; ctx.fillRect(x + (w >> 1), y, 1, h); ctx.fillRect(x, y + (h >> 1), w, 1); }
@@ -749,7 +748,7 @@ function liveHouse3(G, state, p, L, layer, ctx, clock, sleeping) {
   if (!sleeping) { ctx.fillStyle = '#3a2a1c'; ctx.fillRect(x + 4, G0 - 26, 5, 1); ctx.fillRect(x + 8, G0 - 28, 2, 3); if (!G.reduceMotion) smokePuff(ctx, x + 9, G0 - 30, clock, 3); }
   else bubbleZ(ctx, x + 4, G0 - 32, clock);
   drawDog(ctx, 288, G0, '#8a6a44', Math.floor(clock * 0.9) % 2);
-  const b = L.barometer, ang = { clear: 0.35, overcast: 0, rain: -0.4, storm: -0.9, fog: -0.1, snow: -0.3 }[G.wx.kind] || 0;
+  const b = L.barometer, ang = { clear: 0.35, overcast: 0, rain: -0.4, storm: -0.9, snow: -0.3 }[G.wx.kind] || 0;
   ctx.fillStyle = '#e0685a'; ctx.fillRect(R(b.x + Math.sin(ang) * 2), R(b.y - Math.cos(ang) * 2), 1, 1); ctx.fillRect(b.x, b.y, 1, 1);
 }
 function liveHouse4(G, state, p, L, layer, ctx, clock, sleeping) {
@@ -827,15 +826,15 @@ const LINES = {
   fishmonger: {
     haul: ["Let's see what the lake gave you.", 'Ice is fresh. Lay them out.', "Fine. I'll weigh them myself."],
     empty: ["Nothing to sell? The lake's not going anywhere.", 'Come back with fish and we will talk.', 'Slab is bare today. Get out there.'],
-    storm: ['Wild out there. The deep ones bite in this.'], night: ["Late haul? I'm still up."], winter: ['Cold keeps them fresh on the step.'], fog: ['Ghost eel weather. Bring me one.'],
+    storm: ['Wild out there. The deep ones bite in this.'], night: ["Late haul? I'm still up."], winter: ['Cold keeps them fresh on the step.'], overcast: ['Ghost eel weather. Bring me one.'],
   },
   tackle: {
     any: ['Rods, line, bait. Worms are free, mind.', 'Braided line held my last pike. Just saying.', 'Keep the fish in your zone and ease off the reel.'],
-    rain: ['Rain brings the bass up. Take grubs.'], night: ['Glow lure works wonders after dark.'], fog: ['Eels love a fog like this.'], snow: ['Burbot under the ice. Patience.'], best: ["Nothing finer than the Moonlit rod. I'd know, I made it."],
+    rain: ['Rain brings the bass up. Take grubs.'], night: ['Glow lure works wonders after dark.'], overcast: ['Eels like a grey day.'], snow: ['Burbot under the ice. Patience.'], best: ["Nothing finer than the Moonlit rod. I'd know, I made it."],
   },
   boatyard: {
     any: ["Hull's coming along. What can I get you?", 'A cabin boat keeps the rain off. Mostly.', 'Jet drive scares the ducks. Worth it.'],
-    storm: ["Wouldn't take a rowboat out in this."], trawler: ['Look at you. King of the lake.'], night: ['Working late. Lamp oil is cheap.'],
+    storm: ["Wouldn't take a rowboat out in this."], trawler: ['Look at you. King of the lake. The sea is yours too.'], night: ['Working late. Lamp oil is cheap.'], river: ['A Skiff will get you up the Ash River. Watch the rapids.'], ocean: ['Only a Trawler takes the swell out on the Grey Sea.'],
   },
   house1: {
     any: ['Come in, dear, mind the cat.', 'Tom used to fish that deep water. Terrible eel man.', 'Pudding caught a mouse. Very proud.'],
@@ -843,11 +842,11 @@ const LINES = {
   },
   house2: {
     any: ["Ada's reading. I'm pretending to.", 'Did you know the lake has no outlet? Odd, that.', 'The radio only gets one station. It plays weather.'],
-    rain: ['Rain on the roof, a book, the radio. Perfect.'], fog: ['Fog like this is for reading, not fishing.'], sleeping: ['(Tunde has nodded off over his book)'],
+    rain: ['Rain on the roof, a book, the radio. Perfect.'], overcast: ['Grey days are for reading, not fishing.'], sleeping: ['(Tunde has nodded off over his book)'],
   },
   house3: {
     any: ['Forty years on that lake. Sturgeon are patient. Be patient.', 'Biggest pike I ever landed is over the fire. Nine kilo.', "That's Skipper. He's earned his rest."],
-    storm: ["Storm's when the big ones come up. Heed it."], night: ['Fire and a dog. What else is there.'], sleeping: ['(Bram is snoring in his chair)'],
+    storm: ["Storm's when the big ones come up. Heed it."], night: ['Fire and a dog. What else is there.'], sleeping: ['(Bram is snoring in his chair)'], river: ['Salmon run the Ash in summer and autumn. Fish the pools below the rapids.'], ocean: ['I saw a blue shark off the reef once. Never again, and I was glad.'],
   },
   house4: {
     any: ['Nico wants a boat like yours.', 'Mind the blocks, he leaves them everywhere.', 'Sewing his sails. Paper ones, for now.'],
@@ -873,6 +872,8 @@ export function roomPopup(state, ev, clock) {
     if (night && set.night) special.push(...set.night);
     if (season === 3 && set.winter) special.push(...set.winter);
     if (id === 'tackle' && state.empire.rod === 3) special.push(...set.best);
+    if (set.river && state.empire.boat < 1) special.push(...set.river);
+    if (set.ocean && state.empire.boat >= 1 && state.empire.boat < 3) special.push(...set.ocean);
     if (id === 'boatyard' && state.empire.boat === 3) special.push(...set.trawler);
     const base = id === 'fishmonger' ? (p.hold.length ? set.haul : set.empty) : set.any;
     pool = special.length && hash(Math.floor(clock * 7), 3) < 0.6 ? special : base;

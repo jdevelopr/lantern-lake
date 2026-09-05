@@ -6,7 +6,8 @@ import { renderRoster } from '../shared/roster.js';
 import { initState, addPlayer, reduce, toSave, fromSave } from '../game/reduce.js';
 import { project } from '../game/project.js';
 import { seasonOf, dayOfSeason, lightAt, ROOMS, BUILDING_BY_ID } from '../game/world.js';
-import { weatherLabel } from '../game/weather.js';
+import { GATES } from '../game/waters.js';
+import { weatherLabel, WEATHER } from '../game/weather.js';
 import { createRenderer } from './render.js';
 import { saveGame, loadGame, deleteGame, listGames } from './save.js';
 import { sfx, unlockAudio, setAmbience } from './audio.js';
@@ -243,18 +244,23 @@ function loop(now) {
 }
 
 // Debug hook for screenshots and tuning: LL.state, LL.renderer,
-// LL.jump({ day, minute, weather, loc, room }) with loc 'lake' | 'town' | 'room' and room a
-// building id ('fishmonger', 'tackle', 'boatyard', 'house1'..'house4').
+// LL.jump({ day, minute, weather, loc, room, water }) with loc 'lake' | 'town' | 'room', room a
+// building id ('fishmonger', 'tackle', 'boatyard', 'house1'..'house4') and water 'lake' |
+// 'river' | 'ocean' (the boat appears at that water's entry).
 window.LL = {
   get state() { return state; }, get renderer() { return renderer; },
-  jump({ day, minute, weather, loc, room } = {}) {
+  jump({ day, minute, weather, loc, room, water } = {}) {
     if (day !== undefined) state.time.day = day;
     if (minute !== undefined) state.time.minute = minute;
-    if (weather !== undefined && state.weather) { state.weather.kind = weather; state.weather.intensity = 1; state.weather.t = 600; }
+    if (weather !== undefined && state.weather && WEATHER[weather]) { state.weather.kind = weather; state.weather.intensity = weather === 'clear' ? 0 : 1; state.weather.next = null; state.weather.t = 600; }
     if (loc) for (const p of Object.values(state.players)) {
       p.loc = loc; p.door = null; p.menu = null;
       if (loc === 'room') { p.room = ROOMS[room] ? room : 'tackle'; p.walk.x = ROOMS[p.room].door + 14; p.walk.dir = 1; }
       else p.room = null;
+      if (loc === 'lake' && water && water !== p.water) {
+        const from = water === 'river' ? GATES.lake[0] : water === 'ocean' ? GATES.river[1] : GATES.river[0];
+        p.water = water; p.boat.x = from.spawn.x; p.boat.y = from.spawn.y; p.boat.heading = from.spawn.heading; p.boat.vx = p.boat.vy = 0;
+      }
     }
   },
 };
@@ -266,17 +272,20 @@ function drainEvents() {
     renderer.onEvent(ev, state);
     if (ev.n === 'caught') sfx(ev.fish.tier >= 3 ? 'bigcatch' : 'caught');
     else if (ev.n === 'weather') {
-      const line = { clear: 'The sky clears', overcast: 'Clouds roll in', rain: 'Rain is coming', storm: 'A storm is rolling in', fog: 'Fog settles on the lake', snow: 'Snow begins to fall' }[ev.kind];
+      const line = { clear: 'The sky clears', overcast: 'Clouds roll in', rain: 'Rain is coming', storm: 'A storm is rolling in', snow: 'Snow begins to fall' }[ev.kind];
       if (line) toast(line);
       sfx('weather');
     } else if (ev.n === 'newday') {
       sfx('newday');
       toast(ev.newSeason ? `${SEASON_NAMES[ev.season]} has come` : `Day ${dayOfSeason(ev.day)} of ${SEASON_NAMES[ev.season]}`);
     } else if (ev.n === 'enter') sfx(BUILDING_BY_ID[ev.room]?.house ? 'knock' : 'bell');
+    else if (ev.n === 'cross') sfx('sail');
+    else if (ev.n === 'arrive') sfx('dock');
+    else if (ev.n === 'locked') sfx('nope');
     else sfx(ev.n);
     if (mode === 'multi' && ev.seat !== undefined) {
       const { seat, n } = ev;
-      if (['bite', 'hooked', 'tugwarn', 'tug', 'pullhit', 'pullmiss', 'snap', 'lost', 'caught', 'sold', 'buy', 'nope', 'zone', 'holdfull', 'nojournal'].includes(n))
+      if (['bite', 'hooked', 'tugwarn', 'tug', 'pullhit', 'pullmiss', 'snap', 'lost', 'caught', 'sold', 'buy', 'nope', 'zone', 'holdfull', 'nojournal', 'locked'].includes(n))
         host.sendTo(seat, { t: 'event', name: n, data: n === 'caught' ? { id: ev.fish.id, name: ev.fish.name, weight: ev.fish.weight, price: ev.fish.price, tier: ev.fish.tier, isNew: !!ev.isNew } : n === 'sold' ? { value: ev.value } : null });
     }
   }

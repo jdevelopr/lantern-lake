@@ -73,7 +73,7 @@ export function createWeatherFx(reduceMotion) {
     ctx.restore();
   }
 
-  /** Fog bands and haze, drawn after lighting so they sit in the air. */
+  /** Rain, snow and cloud haze, drawn after lighting so it sits in the air. */
   function haze(ctx, pane, state, light) {
     const w = state.weather; if (!w || w.intensity <= 0) return;
     const k = w.intensity;
@@ -81,29 +81,7 @@ export function createWeatherFx(reduceMotion) {
     ctx.beginPath(); ctx.rect(pane.x, pane.y, pane.w, pane.h); ctx.clip();
     ctx.translate(pane.x, pane.y);
     const tone = light > 0.5 ? '#aeb6c0' : '#3a4356';
-    if (w.kind === 'fog') {
-      // a flat veil, then drifting wisps: wide low lumps with dithered edges
-      ctx.globalAlpha = 0.34 * k;
-      ctx.fillStyle = tone; ctx.fillRect(0, 0, pane.w, pane.h);
-      ctx.globalAlpha = 1;
-      const wisp = light > 0.5 ? '#c9d0d8' : '#55617a';
-      for (let i = 0; i < 14; i++) {
-        const sp = 0.4 + hash(i, 71) * 0.8, dir = i % 2 ? 1 : -1;
-        const x = ((hash(i, 72) * 1400 + bandDrift * 6 * sp * dir) % (pane.w + 400) + pane.w + 400) % (pane.w + 400) - 200;
-        const y = 10 + hash(i, 73) * (pane.h - 40) + Math.sin(bandDrift * 0.2 + i) * 6;
-        const rx = 60 + hash(i, 74) * 120, ry = 5 + hash(i, 75) * 9;
-        ctx.fillStyle = ditherPattern(ctx, wisp, (0.18 + hash(i, 76) * 0.14) * k);
-        for (let dy = -ry; dy <= ry; dy++) {
-          const half = Math.floor(rx * Math.sqrt(Math.max(0, 1 - (dy / ry) ** 2)));
-          ctx.fillRect(R(x - half), R(y + dy), half * 2, 1);
-        }
-        ctx.fillStyle = ditherPattern(ctx, wisp, 0.34 * k);
-        for (let dy = -(ry >> 1); dy <= (ry >> 1); dy++) {
-          const half = Math.floor(rx * 0.6 * Math.sqrt(Math.max(0, 1 - (dy / (ry >> 1 || 1)) ** 2)));
-          ctx.fillRect(R(x - half + 10), R(y + dy), half * 2, 1);
-        }
-      }
-    } else if (w.kind === 'rain' || w.kind === 'storm' || w.kind === 'overcast' || w.kind === 'snow') {
+    if (w.kind === 'rain' || w.kind === 'storm' || w.kind === 'overcast' || w.kind === 'snow') {
       ctx.globalAlpha = (w.kind === 'storm' ? 0.22 : w.kind === 'snow' ? 0.18 : 0.14) * k;
       ctx.fillStyle = tone; ctx.fillRect(0, 0, pane.w, pane.h);
       ctx.globalAlpha = 1;

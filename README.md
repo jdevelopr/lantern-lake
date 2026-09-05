@@ -18,12 +18,23 @@ they walk through, and carry no black outlines; the fish illustrations do. Text 
 canvas is a hand-drawn 5x7 bitmap font. The camera follows your boat or walker; two
 boats share one view until they drift apart, then the screen splits.
 
-**Weather** rolls in and out on its own: clear, overcast, rain, storm, fog and snow, with
-odds that depend on the season. It is part of the shared game state, so it is saved with
-the lake and shown on the phones. It changes the fishing too: rain brings faster bites and
-favours bass, trout and carp; storms shorten the hook window but tempt the big deep-water
-fish; fog favours the ghost eel and the lanternfish; cloud cover lets night biters show
-up by day at half odds; snow slows everything but suits burbot and pike.
+**Weather** rolls in and out on its own: clear, overcast, rain, storm and snow, with odds
+that depend on the season. It is part of the shared game state, so it is saved with the
+lake and shown on the phones. It changes the fishing too: rain brings faster bites and
+favours bass, trout, carp and salmon; storms shorten the hook window but tempt the big
+deep-water fish and the giants of the sea; cloud cover lets night biters show up by day at
+half odds; snow slows everything but suits burbot, pike, cod and herring.
+
+**Three waters.** The lake's north-east bay narrows into the Ash River, a winding channel
+of rapids, pools and undercut banks with its own eight species (chub, crayfish, grayling,
+brown trout, freshwater drum, river eel, zander, salmon). The river pushes your boat
+downstream, hard in the rapids, so you fight the current with the engine; a Skiff or
+better is needed to sail in. At the river's end lies the Grey Sea: shoals along the cliffs,
+a reef with a wreck, a lighthouse islet, and beyond that the deep blue, home to nine more
+species (herring, mackerel, flounder, cod, sea bass, halibut, bluefin tuna, swordfish and
+the blue shark). A slow swell drifts the boat and grows in a storm; only the Trawler can
+take it. Sail into a river mouth or the sea gate and press the big button to cross; the
+prompt tells you which boat you still need.
 
 ## How to play
 
@@ -59,7 +70,7 @@ you have bought and tags the next one with its price, the bait pegs mark what is
 tin, the boatyard hull on the trestles is your current boat, and the fishmonger lays
 your last sale out on the ice. After ten at night the houses are asleep.
 
-**Fish and the journal:** every catch shows a card with the species' illustration, weight
+**Fish and the journal:** every catch (34 species across the three waters) shows a card with the species' illustration, weight
 and price on the TV and on the catcher's phone. The tackle shop sells the *Fish journal*
 (350 g), after which a Journal button on the phone (J in single player) opens it from
 anywhere: one page per species with the artwork, your own count, best weight, worth and
@@ -133,10 +144,11 @@ css/style.css         art direction for the HTML screens and the phone controlle
 js/main.js            host or phone, decided by ?room=
 js/net.js             PeerJS transport (host-authoritative star)
 js/shared/            constants, gear and fish catalogue, fish illustrations, journal text, roster widget
-js/game/              rules: world (lake shape, time), fishing, weather, reducer, projection
+js/game/              rules: world (lake shape, time), waters (river, sea, gates, currents), fishing, weather, reducer, projection
 js/host/              TV: loop, audio, saves, keyboard for solo mode, and the renderer:
   gfx.js                bitmap font, light sprites, dither, palette maths, vignette
   lake.js               baked terrain per season, water, boats, fishing overlays, lake lights
+  waters.js             the river and the sea: banks, rapids, swell, reef, lighthouse beam
   town.js               baked street facades, sky and hills, wet road, walker, shop menu
   room.js               interiors: baked rooms, window weather, lamps and fires, keepers
   figure.js             people and animals: walker, keepers, residents, sitting, sleeping
@@ -145,8 +157,8 @@ js/host/              TV: loop, audio, saves, keyboard for solo mode, and the re
 js/client/            phone: joystick, controller UI
 
 For tuning there is a debug hook on the host: `LL.state`, `LL.renderer`, and
-`LL.jump({ day, minute, weather, loc, room })` from the browser console jumps the lake to
-any time, season, weather (`clear`, `overcast`, `rain`, `storm`, `fog`, `snow`) or place
-(`loc` is `lake`, `town` or `room`; `room` is `fishmonger`, `tackle`, `boatyard` or
-`house1` to `house4`).
+`LL.jump({ day, minute, weather, loc, room, water })` from the browser console jumps the lake to
+any time, season, weather (`clear`, `overcast`, `rain`, `storm`, `snow`) or place (`loc`
+is `lake`, `town` or `room`; `room` is `fishmonger`, `tackle`, `boatyard` or `house1` to
+`house4`; `water` is `lake`, `river` or `ocean`).
 ```

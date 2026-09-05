@@ -1,5 +1,6 @@
 // The lake scene: baked terrain per season, animated water, boats, fishing.
 import { WORLD, LAKE, DEEP, ROCKS, REEDS, DOCK, lakeNorm, deepNorm, shoreScale, seasonOf } from '../game/world.js';
+import { MOUTH } from '../game/waters.js';
 import { gearStats } from '../shared/catalog.js';
 import { mkCanvas, R, hash, disc, ellipse, dith, mix, scale, rgb, text, sprite } from './gfx.js';
 
@@ -105,7 +106,9 @@ export function buildLakeBackground(season) {
   for (const k in S) if (S[k]) P[k] = rgb(S[k]);
   // Per-pixel terrain: grass with noise, sand ring, banded water.
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const i = (y * W + x) * 4, n = lakeNorm(x, y);
+    const i = (y * W + x) * 4;
+    let n = lakeNorm(x, y);
+    if (x >= MOUTH.x0 - 8 && n >= 1) { const m = Math.abs(y - MOUTH.y) / MOUTH.half, fade = Math.min(1, (x - MOUTH.x0 + 8) / 10); const mn = m < 1 ? 0.8 + m * 0.19 : m < 1.2 ? 1 + (m - 1) * 0.5 : 2; n = Math.min(n, mn + (1 - fade) * 0.3); }
     if (n >= 1.1) {
       const nz = hash(x >> 2, y >> 2, 11);
       let col = P.grass;
@@ -146,7 +149,7 @@ export function buildLakeBackground(season) {
   // Grass tufts, flowers, small stones
   for (let i = 0; i < 420; i++) {
     const x = R(hash(i, 21) * W), y = R(hash(i, 22) * H);
-    if (lakeNorm(x, y) < 1.14) continue;
+    if (lakeNorm(x, y) < 1.14 || inMouthLand(x, y)) continue;
     const k = hash(i, 23);
     if (k < 0.55) { g.fillStyle = S.grass3; g.fillRect(x, y, 1, 1); g.fillRect(x + 1, y - 1, 1, 1); g.fillStyle = S.grass2; g.fillRect(x + 2, y, 1, 1); }
     else if (k < 0.8) { g.fillStyle = S.grass2; g.fillRect(x, y, 2, 1); }
@@ -161,7 +164,7 @@ export function buildLakeBackground(season) {
   for (let i = 0; i < 420; i++) {
     const x = R(hash(i, 7) * W), y = R(hash(i, 8) * H);
     const n = lakeNorm(x, y);
-    if (n < 1.16 || (x > 100 && x < 240 && y > 286) || (x < 140 && y < 110) || (x > 540 && y > 280)) continue;
+    if (n < 1.16 || (x > 100 && x < 240 && y > 286) || (x < 140 && y < 110) || (x > 540 && y > 280) || inMouthLand(x, y)) continue;
     const edge = Math.min(x, W - x, y, H - y);
     if (n < 1.3 && hash(i, 9) < 0.7) continue;
     if (edge > 70 && hash(i, 12) < 0.5) continue;
@@ -174,7 +177,7 @@ export function buildLakeBackground(season) {
   // Bushes near the shore
   for (let i = 0; i < 40; i++) {
     const x = R(hash(i, 31) * W), y = R(hash(i, 32) * H), n = lakeNorm(x, y);
-    if (n < 1.12 || n > 1.4 || (x > 100 && x < 240 && y > 280)) continue;
+    if (n < 1.12 || n > 1.4 || (x > 100 && x < 240 && y > 280) || inMouthLand(x, y)) continue;
     ellipse(g, x, y, 3, 2, S.canopy2); ellipse(g, x - 1, y - 1, 2, 1, S.canopy);
     if (S.bloom && i % 3 === 0) { g.fillStyle = S.bloom; g.fillRect(x, y - 1, 1, 1); }
   }
@@ -217,8 +220,13 @@ export function buildLakeBackground(season) {
     g.fillStyle = scale(S.shallowHi, 1.05); g.fillRect(rk.x - rk.r, rk.y + ry - 1, rk.r * 2 + 1, 1);
   }
   drawPier(g, S);
+  // a signpost on the bank where the river leaves the lake
+  const sx = MOUTH.x0 + 26, sy = MOUTH.y - MOUTH.half - 8;
+  g.fillStyle = '#4a3324'; g.fillRect(sx, sy - 14, 2, 16); g.fillStyle = '#c9b28a'; g.fillRect(sx - 14, sy - 15, 31, 10); g.fillStyle = '#8a6a44'; g.fillRect(sx - 14, sy - 6, 31, 1);
+  text(g, 'RIVER', sx + 1, sy - 14, { color: '#2a1a10', align: 'center', shadow: false });
   return c;
 }
+const inMouthLand = (x, y) => x >= MOUTH.x0 - 8 && Math.abs(y - MOUTH.y) < MOUTH.half + 6;
 
 function drawPier(g, S) {
   const px = DOCK.pierX, top = DOCK.pierTop, bot = DOCK.pierBottom;
@@ -283,7 +291,7 @@ export function drawWater(ctx, state, clock, light, wx, reduceMotion) {
   }
   ctx.globalAlpha = 1;
   // Sun glints on the open water by day
-  if (light > 0.4 && wx.kind !== 'fog') {
+  if (light > 0.4) {
     const step = Math.floor(clock * 4);
     ctx.fillStyle = '#e8f0f4';
     for (let i = 0; i < 40; i++) {
@@ -318,7 +326,7 @@ export function drawWater(ctx, state, clock, light, wx, reduceMotion) {
 }
 
 /** Wobbling reflections of light sources in the water, drawn with 'screen'. */
-export function drawReflections(ctx, lights, clock, dark, reduceMotion) {
+export function drawReflections(ctx, lights, clock, dark, reduceMotion, isWater = (x, y) => lakeNorm(x, y) < 0.985) {
   if (dark <= 0.05) return;
   ctx.globalCompositeOperation = 'screen';
   for (const L of lights) {
@@ -326,7 +334,7 @@ export function drawReflections(ctx, lights, clock, dark, reduceMotion) {
     const len = R(L.r * 0.9), y0 = L.y + 3;
     for (let i = 0; i < len; i += 2) {
       const yy = y0 + i;
-      if (lakeNorm(L.x, yy) > 0.985) continue;
+      if (!isWater(L.x, yy)) continue;
       const wob = reduceMotion ? 0 : Math.sin(clock * 2.4 + i * 0.5 + L.x) * (1 + i / 10);
       const w = 2 + ((i / 6) | 0);
       ctx.globalAlpha = dark * L.a * 0.22 * (1 - i / len);
@@ -478,13 +486,14 @@ function drawReelBar(ctx, f, p, x, y, cam, pw, ph, clock, reduceMotion) {
 
 /* ------------------------------------------------------------ lights --- */
 /** World-space light sources on the lake. Returned each frame; cheap. */
-export function lakeLights(state, players, clock, reduceMotion) {
+export function lakeLights(state, players, clock, reduceMotion, scenery = true) {
   const flick = reduceMotion ? 0 : Math.sin(clock * 9) * 1.5 + Math.sin(clock * 23) * 0.6;
-  const L = [
+  const L = !scenery ? [] : [
     { x: DOCK.pierX + 7, y: DOCK.pierTop - 2, r: 40 + flick, color: '#ffb257', a: 1 },
     { x: DOCK.pierX + 12 + 5, y: DOCK.pierBottom - 6 + 7, r: 16, color: '#ffc46a', a: 0.8, win: true },
+    { x: MOUTH.x0 + 27, y: MOUTH.y - MOUTH.half - 22, r: 30 + flick, color: '#ffb257', a: 1 },
   ];
-  for (const c of CABINS) L.push({ x: c.x + c.w - 9, y: c.y + 8, r: 22, color: '#ffc46a', a: 0.9, win: true });
+  if (scenery) for (const c of CABINS) L.push({ x: c.x + c.w - 9, y: c.y + 8, r: 22, color: '#ffc46a', a: 0.9, win: true });
   for (const p of players) if (p.loc === 'lake') {
     const lt = boatLantern(p);
     L.push({ x: lt.x, y: lt.y, r: 44 + flick, color: '#ffb257', a: 1 });
@@ -496,4 +505,4 @@ export function lakeLights(state, players, clock, reduceMotion) {
   return L;
 }
 
-export { SEASON as LAKE_SEASON };
+export { SEASON as LAKE_SEASON, tree, rockOnLand, cabin };

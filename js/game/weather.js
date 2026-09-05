@@ -1,4 +1,4 @@
-// Weather. Lives in shared state so it is saved, deterministic (rand(state)) and
+// Weather: clear, overcast, rain, storm and snow. Lives in shared state so it is saved, deterministic (rand(state)) and
 // visible to the phones. The renderer only reads it; the rules use the modifiers.
 import { rand } from './fishing.js';
 import { seasonOf } from './world.js';
@@ -8,20 +8,19 @@ import { seasonOf } from './world.js';
 // sky: how much daylight the cloud cover eats (0 none, 1 all).
 export const WEATHER = {
   clear:    { label: 'Clear',    wait: 1.0,  window: 1.0,  dim: false, sky: 0.0,  favors: {} },
-  overcast: { label: 'Overcast', wait: 0.9,  window: 1.05, dim: true,  sky: 0.35, favors: { walleye: 1.4, pike: 1.3, catfish: 1.3 } },
-  rain:     { label: 'Rain',     wait: 0.75, window: 0.95, dim: true,  sky: 0.45, favors: { bass: 1.6, trout: 1.5, carp: 1.4, boot: 1.5 } },
-  storm:    { label: 'Storm',    wait: 0.6,  window: 0.8,  dim: true,  sky: 0.6,  favors: { muskie: 1.8, sturgeon: 1.8, pike: 1.5, lantern: 1.5 } },
-  fog:      { label: 'Fog',      wait: 1.1,  window: 1.1,  dim: true,  sky: 0.3,  favors: { eel: 2.2, lantern: 1.8, burbot: 1.4 } },
-  snow:     { label: 'Snow',     wait: 1.2,  window: 1.0,  dim: true,  sky: 0.3,  favors: { burbot: 1.6, pike: 1.4, walleye: 1.2 } },
+  overcast: { label: 'Overcast', wait: 0.9,  window: 1.05, dim: true,  sky: 0.35, favors: { walleye: 1.4, pike: 1.3, catfish: 1.3, eel: 1.6, lantern: 1.4, cod: 1.3, zander: 1.4 } },
+  rain:     { label: 'Rain',     wait: 0.75, window: 0.95, dim: true,  sky: 0.45, favors: { bass: 1.6, trout: 1.5, carp: 1.4, boot: 1.5, btrout: 1.5, salmon: 1.6, grayling: 1.3, seabass: 1.4 } },
+  storm:    { label: 'Storm',    wait: 0.6,  window: 0.8,  dim: true,  sky: 0.6,  favors: { muskie: 1.8, sturgeon: 1.8, pike: 1.5, lantern: 1.5, tuna: 1.6, swordfish: 1.8, shark: 2, halibut: 1.4 } },
+  snow:     { label: 'Snow',     wait: 1.2,  window: 1.0,  dim: true,  sky: 0.3,  favors: { burbot: 1.6, pike: 1.4, walleye: 1.2, cod: 1.5, herring: 1.4, halibut: 1.3 } },
 };
 export const WEATHER_KINDS = Object.keys(WEATHER);
 
 // Per season: [kind, weight]. Winter turns rain into snow.
 const TABLE = [
-  [['clear', 32], ['overcast', 22], ['rain', 28], ['fog', 12], ['storm', 6]],
-  [['clear', 48], ['overcast', 14], ['rain', 12], ['fog', 8], ['storm', 18]],
-  [['clear', 24], ['overcast', 30], ['rain', 22], ['fog', 20], ['storm', 4]],
-  [['clear', 26], ['overcast', 30], ['snow', 34], ['fog', 10]],
+  [['clear', 38], ['overcast', 26], ['rain', 28], ['storm', 8]],
+  [['clear', 52], ['overcast', 16], ['rain', 14], ['storm', 18]],
+  [['clear', 34], ['overcast', 36], ['rain', 24], ['storm', 6]],
+  [['clear', 30], ['overcast', 34], ['snow', 36]],
 ];
 
 const RAMP = 0.12;   // intensity change per second (about 8 s to fully roll in)

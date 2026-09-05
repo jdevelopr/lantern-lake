@@ -1,10 +1,11 @@
 // Host-only rules. Pure over state: no DOM, no network. Randomness via rand(state).
 import { GEAR, GEAR_KEYS, gearStats, FISH_BY_ID } from '../shared/catalog.js';
 import { PLAYER_COLORS, MIN_PER_SEC, DAY_MINUTES, SEASON_DAYS } from '../shared/protocol.js';
-import { WORLD, TOWN, ROCKS, DOCK, BUILDINGS, BUILDING_BY_ID, ROOMS, clampToLake, nearDock, seasonOf, zoneAt } from './world.js';
+import { WORLD, TOWN, DOCK, BUILDINGS, BUILDING_BY_ID, ROOMS, nearDock, seasonOf } from './world.js';
 import { FISH } from '../shared/catalog.js';
 import { rand, castPower, pickFish, startReel, tickReel } from './fishing.js';
 import { initWeather, coerceWeather, tickWeather, weatherMods } from './weather.js';
+import { clampWater, rocksFor, gateAt, zoneAtWater, currentAt, BOAT_NEEDED } from './waters.js';
 
 export function initState(seed = 1) {
   return {
@@ -29,6 +30,7 @@ export function addPlayer(state, seat, cid, name, saved = null) {
   const p = {
     seat, cid, name, color: PLAYER_COLORS[seat % PLAYER_COLORS.length], connected: true,
     loc: 'lake',          // 'lake' | 'town' | 'room'
+    water: 'lake',        // which water the boat is on: 'lake' | 'river' | 'ocean'
     room: null,           // building id while loc is 'room'
     door: null,           // { t, done, to } while fading through a doorway
     boat: { x: DOCK.spawn.x + seat * 26, y: DOCK.spawn.y - seat * 6, vx: 0, vy: 0, heading: -Math.PI / 2 },
@@ -113,22 +115,33 @@ function tickLake(state, p, edge, gear, dt) {
       while (d < -Math.PI) d += Math.PI * 2;
       b.heading += d * Math.min(1, 7 * dt);
     }
-    b.x += b.vx * dt; b.y += b.vy * dt;
-    const c = clampToLake(b.x, b.y, 0.94);
+    // the river pushes, the sea swells; the boat's own speed is on top
+    const cur = currentAt(p.water, b.x, b.y, state.tick / 60, state.weather?.kind, state.weather?.intensity || 0);
+    b.x += (b.vx + cur.vx) * dt; b.y += (b.vy + cur.vy) * dt;
+    const c = clampWater(p.water, b.x, b.y, 0.94);
     if (c.hit) { b.x = c.x; b.y = c.y; b.vx *= 0.2; b.vy *= 0.2; }
-    for (const r of ROCKS) {
+    for (const r of rocksFor(p.water)) {
       const dx = b.x - r.x, dy = b.y - r.y, d = Math.hypot(dx, dy), min = r.r + 7;
       if (d < min && d > 0) { b.x = r.x + dx / d * min; b.y = r.y + dy / d * min; b.vx *= 0.3; b.vy *= 0.3; }
     }
-    p.moving = Math.hypot(b.vx, b.vy) > 4;
+    p.moving = Math.hypot(b.vx + cur.vx, b.vy + cur.vy) > 4;
 
-    const docking = nearDock(b.x, b.y);
-    p.prompt = docking ? 'Dock' : full ? 'Hold full' : 'Cast';
-    p.aLabel = docking ? 'Dock' : 'Cast';
+    const docking = p.water === 'lake' && nearDock(b.x, b.y);
+    const gate = gateAt(p.water, b.x, b.y), locked = gate && state.empire.boat < gate.need;
+    p.prompt = docking ? 'Dock' : gate ? (locked ? `Needs ${BOAT_NEEDED[gate.need]}` : gate.label) : full ? 'Hold full' : 'Cast';
+    p.aLabel = docking ? 'Dock' : gate ? 'Sail' : 'Cast';
     if (edge.pressA) {
       if (docking) {
         p.loc = 'town'; p.walk.x = 90; p.walk.dir = 1; b.vx = b.vy = 0;
         state.events.push({ n: 'dock', seat: p.seat });
+      } else if (gate) {
+        if (locked) state.events.push({ n: 'locked', seat: p.seat, need: gate.need, to: gate.to });
+        else {
+          b.vx = b.vy = 0;
+          p.door = { t: 0, done: false, to: { loc: 'lake', water: gate.to, boat: gate.spawn } };
+          p.menu = null; p.near = null; p.prompt = ''; p.aLabel = 'Wait';
+          state.events.push({ n: 'cross', seat: p.seat, to: gate.to });
+        }
       } else if (!full) {
         p.fishing = { stage: 'charging', t: 0, power: 0 };
         b.vx = b.vy = 0;
@@ -147,7 +160,7 @@ function tickLake(state, p, edge, gear, dt) {
       if (edge.releaseA && f.t > 0.05) {
         const dist = 26 + f.power * 105;
         const tx = b.x + Math.cos(b.heading) * dist, ty = b.y + Math.sin(b.heading) * dist;
-        const c = clampToLake(tx, ty, 0.97);
+        const c = clampWater(p.water, tx, ty, 0.97);
         f.stage = 'flying'; f.t = 0; f.dur = 0.5;
         f.from = { x: b.x + Math.cos(b.heading) * 8, y: b.y + Math.sin(b.heading) * 8 };
         f.to = { x: c.x, y: c.y }; f.bx = f.from.x; f.by = f.from.y;
@@ -190,7 +203,7 @@ function tickLake(state, p, edge, gear, dt) {
       f.win -= dt;
       p.prompt = 'Hook!'; p.aLabel = 'Hook';
       if (edge.pressA) {
-        const fish = pickFish(state, f.bx, f.by, gear);
+        const fish = pickFish(state, f.bx, f.by, gear, p.water);
         startReel(f, fish, gear, state);
         state.events.push({ n: 'hooked', seat: p.seat, tier: fish.tier });
       } else if (f.win <= 0) {
@@ -212,10 +225,10 @@ function tickLake(state, p, edge, gear, dt) {
         if (!p.stats.best || fish.weight > p.stats.best.weight) p.stats.best = rec;
         if (!state.empire.best || fish.weight > state.empire.best.weight) state.empire.best = rec;
         // the player's own journal entry: count, best, worth, and the first time and place
-        const zone = zoneAt(f.bx, f.by), L = (p.stats.log[fish.id] = p.stats.log[fish.id] || { n: 0, best: 0, worth: 0, first: null });
+        const zone = zoneAtWater(p.water, f.bx, f.by), L = (p.stats.log[fish.id] = p.stats.log[fish.id] || { n: 0, best: 0, worth: 0, first: null });
         L.n++; L.worth += fish.price;
         if (fish.weight > L.best) { L.best = fish.weight; L.bestDay = state.time.day; }
-        if (!L.first) L.first = { day: state.time.day, minute: Math.floor(state.time.minute), zone, weather: state.weather?.kind || 'clear' };
+        if (!L.first) L.first = { day: state.time.day, minute: Math.floor(state.time.minute), zone, water: p.water, weather: state.weather?.kind || 'clear' };
         state.events.push({ n: 'caught', seat: p.seat, fish, x: f.bx, y: f.by, isNew: L.n === 1, zone });
       } else if (r === 'lost') {
         f.stage = 'lost'; f.t = 1.2; f.reason = 'Line snapped';
@@ -258,7 +271,7 @@ function tickTown(state, p, edge, gear, dt) {
   p.aLabel = b ? (b.id === 'dock' ? 'Sail' : b.house ? 'Knock' : 'Enter') : 'Walk';
   if (edge.pressA && b) {
     if (b.id === 'dock') {
-      p.loc = 'lake';
+      p.loc = 'lake'; p.water = 'lake';
       p.boat.x = DOCK.spawn.x + p.seat * 26; p.boat.y = DOCK.spawn.y - p.seat * 6;
       p.boat.vx = p.boat.vy = 0; p.boat.heading = -Math.PI / 2;
       state.events.push({ n: 'sail', seat: p.seat });
@@ -287,7 +300,10 @@ function tickDoor(state, p, dt) {
     d.done = true;
     const to = d.to;
     p.loc = to.loc; p.room = to.loc === 'room' ? to.room : null;
-    p.walk.x = to.x; p.walk.dir = to.dir; p.walk.moving = false;
+    if (to.water) {
+      p.water = to.water; p.boat.x = to.boat.x; p.boat.y = to.boat.y; p.boat.heading = to.boat.heading; p.boat.vx = p.boat.vy = 0;
+      state.events.push({ n: 'arrive', seat: p.seat, water: to.water });
+    } else { p.walk.x = to.x; p.walk.dir = to.dir; p.walk.moving = false; }
     if (to.loc === 'room') state.events.push({ n: 'enter', seat: p.seat, room: to.room });
   }
   if (d.t >= DOOR_TIME) p.door = null;

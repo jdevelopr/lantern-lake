@@ -1,7 +1,8 @@
 // The fishing minigame. Pure: takes state pieces + inputs, mutates the fishing object,
 // pushes events. No DOM, no network, no Math.random (uses the seeded rand).
-import { FISH } from '../shared/catalog.js';
-import { zoneAt, seasonOf, isNight } from './world.js';
+import { FISH, WATER_OF } from '../shared/catalog.js';
+import { seasonOf, isNight } from './world.js';
+import { zoneAtWater } from './waters.js';
 
 /** Seeded PRNG (mulberry32) living in state.seed so a session can be replayed. */
 export function rand(state) {
@@ -21,16 +22,19 @@ export function castPower(t) {
   return x < 1 ? x : 2 - x;
 }
 
-export function pickFish(state, x, y, gear) {
-  const zone = zoneAt(x, y);
+export function pickFish(state, x, y, gear, water = 'lake') {
+  const zone = zoneAtWater(water, x, y);
   const season = seasonOf(state.time.day);
   const night = isNight(state.time.minute);
   const wx = gear.wx || { dim: false, favor: () => 1 };
   // Low light from cloud cover lets night biters show up by day, at half weight.
-  const pool = FISH.filter(f =>
+  let pool = FISH.filter(f =>
+    WATER_OF(f) === water &&
     f.zones.includes(zone) &&
     (f.seasons === 'all' || f.seasons.includes(season)) &&
     (f.time === 'any' || (f.time === 'night' ? (night || wx.dim) : !night)));
+  if (!pool.length) pool = FISH.filter(f => WATER_OF(f) === water && f.zones.includes(zone));
+  if (!pool.length) pool = FISH.filter(f => WATER_OF(f) === water);
   const weights = pool.map(f => f.rarity * (f.tier >= 3 ? 1 + gear.rare : 1) * wx.favor(f.id) * (f.time === 'night' && !night ? 0.5 : 1));
   const total = weights.reduce((a, b) => a + b, 0);
   let roll = rand(state) * total, f = pool[pool.length - 1];

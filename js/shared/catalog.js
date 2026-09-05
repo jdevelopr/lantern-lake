@@ -76,7 +76,27 @@ export const FISH = [
   { id: 'lantern',   name: 'Lanternfish',     zones: ['open', 'deep'],      seasons: [1, 2],         time: 'night', w: [0.5, 2],   ppk: 45, tier: 3, behavior: 'darter', rarity: 3,  color: '#ffe680' },
   { id: 'muskie',    name: 'Muskellunge',     zones: ['deep'],              seasons: [1, 2],         time: 'any',   w: [5, 20],    ppk: 25, tier: 4, behavior: 'darter', rarity: 3,  color: '#8fa86a' },
   { id: 'sturgeon',  name: 'Lake sturgeon',   zones: ['deep'],              seasons: 'all',          time: 'night', w: [10, 60],   ppk: 20, tier: 4, behavior: 'diver',  rarity: 2,  color: '#5e6b7a' },
+  // Ash River: rapids, pools, the run between them, undercut banks. Needs a Skiff.
+  { id: 'chub',      name: 'Chub',            water: 'river', zones: ['bank', 'run'],     seasons: 'all',    time: 'day',   w: [0.5, 3],   ppk: 8,  tier: 1, behavior: 'calm',   rarity: 28, color: '#9a9a70' },
+  { id: 'crayfish',  name: 'Crayfish',        water: 'river', zones: ['bank'],            seasons: 'all',    time: 'night', w: [0.1, 0.4], ppk: 30, tier: 1, behavior: 'calm',   rarity: 22, color: '#b04a3a' },
+  { id: 'grayling',  name: 'Grayling',        water: 'river', zones: ['rapids', 'run'],   seasons: [0, 1, 2], time: 'day',  w: [0.3, 1.5], ppk: 20, tier: 2, behavior: 'darter', rarity: 18, color: '#8aa0b8' },
+  { id: 'btrout',    name: 'Brown trout',     water: 'river', zones: ['run', 'pool'],     seasons: 'all',    time: 'day',   w: [0.5, 4],   ppk: 18, tier: 2, behavior: 'darter', rarity: 16, color: '#a08a4a' },
+  { id: 'drum',      name: 'Freshwater drum', water: 'river', zones: ['pool'],            seasons: [1, 2],   time: 'any',   w: [1, 8],     ppk: 12, tier: 2, behavior: 'calm',   rarity: 12, color: '#9aa8b0' },
+  { id: 'reel',      name: 'River eel',       water: 'river', zones: ['bank', 'pool'],    seasons: 'all',    time: 'night', w: [0.5, 3],   ppk: 22, tier: 2, behavior: 'diver',  rarity: 10, color: '#5a6a50' },
+  { id: 'zander',    name: 'Zander',          water: 'river', zones: ['pool', 'run'],     seasons: [0, 2],   time: 'night', w: [1, 6],     ppk: 24, tier: 3, behavior: 'darter', rarity: 7,  color: '#8a9060' },
+  { id: 'salmon',    name: 'Salmon',          water: 'river', zones: ['rapids', 'pool'],  seasons: [1, 2],   time: 'any',   w: [2, 12],    ppk: 30, tier: 3, behavior: 'diver',  rarity: 5,  color: '#c87a70' },
+  // The Grey Sea: shoals by the shore, the reef, open water, the deep blue. Needs a Trawler.
+  { id: 'herring',   name: 'Herring',         water: 'ocean', zones: ['shoal', 'open'],   seasons: [0, 3],   time: 'any',   w: [0.1, 0.5], ppk: 12, tier: 1, behavior: 'calm',   rarity: 30, color: '#b8c8d8' },
+  { id: 'mackerel',  name: 'Mackerel',        water: 'ocean', zones: ['open', 'shoal'],   seasons: [1, 2],   time: 'day',   w: [0.3, 1.5], ppk: 14, tier: 1, behavior: 'darter', rarity: 26, color: '#3a7a9a' },
+  { id: 'flounder',  name: 'Flounder',        water: 'ocean', zones: ['shoal'],           seasons: 'all',    time: 'day',   w: [0.5, 3],   ppk: 16, tier: 2, behavior: 'calm',   rarity: 16, color: '#8a7a5a' },
+  { id: 'cod',       name: 'Cod',             water: 'ocean', zones: ['blue', 'reef'],    seasons: [3, 0],   time: 'any',   w: [2, 15],    ppk: 20, tier: 2, behavior: 'calm',   rarity: 14, color: '#8a8a6a' },
+  { id: 'seabass',   name: 'Sea bass',        water: 'ocean', zones: ['reef', 'shoal'],   seasons: [1, 2],   time: 'night', w: [1, 6],     ppk: 26, tier: 2, behavior: 'darter', rarity: 12, color: '#6a7a8a' },
+  { id: 'halibut',   name: 'Halibut',         water: 'ocean', zones: ['blue'],            seasons: [3, 0],   time: 'any',   w: [5, 60],    ppk: 24, tier: 3, behavior: 'diver',  rarity: 6,  color: '#5a6a5a' },
+  { id: 'tuna',      name: 'Bluefin tuna',    water: 'ocean', zones: ['blue', 'open'],    seasons: [1, 2],   time: 'day',   w: [10, 80],   ppk: 40, tier: 4, behavior: 'darter', rarity: 4,  color: '#2a4a7a' },
+  { id: 'swordfish', name: 'Swordfish',       water: 'ocean', zones: ['blue'],            seasons: [1, 2],   time: 'night', w: [20, 120],  ppk: 55, tier: 4, behavior: 'diver',  rarity: 3,  color: '#4a5a8a' },
+  { id: 'shark',     name: 'Blue shark',      water: 'ocean', zones: ['blue'],            seasons: 'all',    time: 'any',   w: [30, 150],  ppk: 70, tier: 4, behavior: 'darter', rarity: 1,  color: '#5a7090' },
 ];
+export const WATER_OF = f => f.water || 'lake';
 
 export const FISH_BY_ID = Object.fromEntries(FISH.map(f => [f.id, f]));
 

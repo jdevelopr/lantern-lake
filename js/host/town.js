@@ -271,7 +271,7 @@ function drawHills(G, cam, pw, season) {
   const HILL = [['#6a7e6c', '#4d5e55'], ['#5e7a58', '#3f5a44'], ['#7a6e58', '#54503f'], ['#8f9aa4', '#5c6a76']][season];
   const nightMix = 1 - eff;
   for (const [par, base, col, ph] of [[0.2, 200, mix(HILL[0], '#1c2438', nightMix * 0.85), 0.017], [0.45, 236, mix(HILL[1], '#141a2a', nightMix * 0.85), 0.031]]) {
-    ctx.fillStyle = mix(col, '#7b8794', wx.sky * (0.4 - par * 0.3) + (wx.kind === 'fog' ? wx.k * 0.5 : 0));
+    ctx.fillStyle = mix(col, '#7b8794', wx.sky * (0.4 - par * 0.3));
     // Sample the ridge in the hill's own (parallax) space at fixed even columns, so the
     // silhouette and the pines stay put while the camera slides past them.
     const off = cam.x * par, x0 = Math.floor(off / 2) * 2;
