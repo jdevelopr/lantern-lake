@@ -4,11 +4,21 @@ import { DAY_MINUTES, SEASON_DAYS } from '../shared/protocol.js';
 export const WORLD = { w: 640, h: 360 };
 export const TOWN = { w: 960, h: 360, ground: 296 };
 
+// The lake is an ellipse whose radius wobbles with the angle: layered sine lobes give
+// a bay to the north-east, a broad western shore and a point to the south-east.
 export const LAKE = { cx: 336, cy: 192, rx: 262, ry: 138 };
 export const DEEP = { cx: 372, cy: 178, rx: 112, ry: 54 };
+const LOBES = [[2, 0.092, 3.06], [3, 0.055, 4.46], [5, 0.041, 0.91], [7, 0.038, 2.76], [11, 0.014, 0.49]];
+export function shoreScale(theta) {
+  let s = 1;
+  for (const [f, a, p] of LOBES) s += a * Math.sin(f * theta + p);
+  return s;
+}
+// Rocks block boats. The islet is a big rock with a tree on it; the renderer draws it as land.
 export const ROCKS = [
   { x: 214, y: 118, r: 9 }, { x: 476, y: 262, r: 11 }, { x: 526, y: 104, r: 7 },
-  { x: 156, y: 236, r: 8 }, { x: 386, y: 302, r: 6 },
+  { x: 156, y: 236, r: 8 }, { x: 386, y: 302, r: 6 }, { x: 250, y: 300, r: 5 },
+  { x: 536, y: 168, r: 15, isle: true },
 ];
 export const REEDS = [
   { x: 118, y: 154, r: 30 }, { x: 566, y: 206, r: 32 }, { x: 306, y: 318, r: 26 }, { x: 438, y: 66, r: 24 },
@@ -24,7 +34,12 @@ export const BUILDINGS = [
   { id: 'boatyard',   x: 810, w: 160, label: 'Boatyard',   color: '#a8b4a0', roof: '#5f6f5a' },
 ];
 
-export const lakeNorm = (x, y) => ((x - LAKE.cx) / LAKE.rx) ** 2 + ((y - LAKE.cy) / LAKE.ry) ** 2;
+/** < 1 inside the water; ~1 at the shoreline; grows outward. Radial, so clampToLake still works. */
+export function lakeNorm(x, y) {
+  const dx = (x - LAKE.cx) / LAKE.rx, dy = (y - LAKE.cy) / LAKE.ry;
+  const s = shoreScale(Math.atan2(dy, dx));
+  return (dx * dx + dy * dy) / (s * s);
+}
 export const deepNorm = (x, y) => ((x - DEEP.cx) / DEEP.rx) ** 2 + ((y - DEEP.cy) / DEEP.ry) ** 2;
 export const insideLake = (x, y, margin = 1) => lakeNorm(x, y) < margin;
 
@@ -39,6 +54,7 @@ export function clampToLake(x, y, limit = 0.95) {
 export function zoneAt(x, y) {
   if (deepNorm(x, y) < 1) return 'deep';
   for (const r of REEDS) if (Math.hypot(x - r.x, y - r.y) < r.r + 8) return 'reeds';
+  for (const r of ROCKS) if (r.isle && Math.hypot(x - r.x, y - r.y) < r.r + 16) return 'shallows';
   if (lakeNorm(x, y) > 0.72) return 'shallows';
   return 'open';
 }

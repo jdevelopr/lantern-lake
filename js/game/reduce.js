@@ -3,6 +3,7 @@ import { GEAR, GEAR_KEYS, gearStats, FISH_BY_ID } from '../shared/catalog.js';
 import { PLAYER_COLORS, MIN_PER_SEC, DAY_MINUTES, SEASON_DAYS } from '../shared/protocol.js';
 import { WORLD, TOWN, ROCKS, DOCK, BUILDINGS, clampToLake, nearDock, seasonOf } from './world.js';
 import { rand, castPower, pickFish, startReel, tickReel } from './fishing.js';
+import { initWeather, coerceWeather, tickWeather, weatherMods } from './weather.js';
 
 export function initState(seed = 1) {
   return {
@@ -12,6 +13,7 @@ export function initState(seed = 1) {
       gold: 40, rod: 0, line: 0, bait: 0, baitCount: 0, boat: 0, engine: 0, storage: 0,
       earned: 0, caught: 0, best: null, log: {},
     },
+    weather: initWeather(),
     players: {},
     events: [],
   };
@@ -60,7 +62,9 @@ function tick(state, dt) {
     t.day++;
     state.events.push({ n: 'newday', day: t.day, season: seasonOf(t.day), newSeason: (t.day - 1) % SEASON_DAYS === 0 });
   }
-  const gear = gearStats(state.empire);
+  if (!state.weather) state.weather = initWeather();
+  tickWeather(state, dt);
+  const gear = { ...gearStats(state.empire), wx: weatherMods(state) };
   for (const p of Object.values(state.players)) {
     if (p.connected) {
       const inp = p.input, prev = p.prev;
@@ -151,7 +155,7 @@ function tickLake(state, p, edge, gear, dt) {
       p.prompt = ''; p.aLabel = 'Wait';
       if (k >= 1) {
         f.stage = 'waiting'; f.arc = 0;
-        f.wait = (2.5 + rand(state) * 6) * gear.waitMult;
+        f.wait = (2.5 + rand(state) * 6) * gear.waitMult * gear.wx.wait;
         f.nibble = 0; f.nextNibble = 1 + rand(state) * 2; f.dip = 0;
         state.events.push({ n: 'splash', seat: p.seat, x: f.bx, y: f.by });
       }
@@ -166,7 +170,7 @@ function tickLake(state, p, edge, gear, dt) {
       p.prompt = 'Waiting'; p.aLabel = 'Wait';
       if (edge.back) { p.fishing = null; return; }
       if (f.wait <= 0) {
-        f.stage = 'bite'; f.win = gear.window; f.winDur = gear.window; f.dip = 4;
+        f.stage = 'bite'; f.win = gear.window * gear.wx.window; f.winDur = f.win; f.dip = 4;
         state.events.push({ n: 'bite', seat: p.seat, x: f.bx, y: f.by });
       }
       return;
@@ -320,7 +324,7 @@ function tickMenu(state, p, edge, gear, dt) {
 export function toSave(state, code) {
   return {
     v: 1, code, savedAt: Date.now(),
-    time: state.time, empire: state.empire, seed: state.seed,
+    time: state.time, empire: state.empire, seed: state.seed, weather: state.weather,
     players: Object.values(state.players).map(p => ({ seat: p.seat, cid: p.cid, name: p.name, hold: p.hold, stats: p.stats })),
   };
 }
@@ -329,6 +333,7 @@ export function fromSave(save) {
   const s = initState(save.seed || 1);
   s.time = { ...save.time };
   s.empire = { ...s.empire, ...save.empire };
+  s.weather = coerceWeather(save.weather);
   s.savedPlayers = save.players || [];
   return s;
 }

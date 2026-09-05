@@ -6,6 +6,7 @@ import { renderRoster } from '../shared/roster.js';
 import { initState, addPlayer, reduce, toSave, fromSave } from '../game/reduce.js';
 import { project } from '../game/project.js';
 import { seasonOf, dayOfSeason } from '../game/world.js';
+import { weatherLabel } from '../game/weather.js';
 import { createRenderer } from './render.js';
 import { saveGame, loadGame, deleteGame, listGames } from './save.js';
 import { sfx, unlockAudio } from './audio.js';
@@ -239,13 +240,28 @@ function loop(now) {
   renderer.render(state, { hidePlayers: state.phase === 'lobby', solo: mode === 'solo' });
 }
 
+// Debug hook for screenshots and tuning: LL.state, LL.renderer, LL.jump({ day, minute, weather }).
+window.LL = {
+  get state() { return state; }, get renderer() { return renderer; },
+  jump({ day, minute, weather, loc } = {}) {
+    if (day !== undefined) state.time.day = day;
+    if (minute !== undefined) state.time.minute = minute;
+    if (weather !== undefined && state.weather) { state.weather.kind = weather; state.weather.intensity = 1; state.weather.t = 600; }
+    if (loc) for (const p of Object.values(state.players)) p.loc = loc;
+  },
+};
+
 function drainEvents() {
   const evs = state.events; if (!evs.length) return;
   state.events = [];
   for (const ev of evs) {
     renderer.onEvent(ev, state);
     if (ev.n === 'caught') sfx(ev.fish.tier >= 3 ? 'bigcatch' : 'caught');
-    else if (ev.n === 'newday') {
+    else if (ev.n === 'weather') {
+      const line = { clear: 'The sky clears', overcast: 'Clouds roll in', rain: 'Rain is coming', storm: 'A storm is rolling in', fog: 'Fog settles on the lake', snow: 'Snow begins to fall' }[ev.kind];
+      if (line) toast(line);
+      sfx('weather');
+    } else if (ev.n === 'newday') {
       sfx('newday');
       toast(ev.newSeason ? `${SEASON_NAMES[ev.season]} has come` : `Day ${dayOfSeason(ev.day)} of ${SEASON_NAMES[ev.season]}`);
     } else sfx(ev.n);

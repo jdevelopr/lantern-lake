@@ -53,5 +53,7 @@ const SFX = {
   ready:    () => tone(990, 0.1, { type: 'triangle' }),
   count:    () => tone(880, 0.08, { type: 'square', vol: 0.5 }),
   go:       () => tone(1320, 0.3, { type: 'square', vol: 0.6 }),
+  weather:  () => [392, 494].forEach((f, i) => tone(f, 0.35, { type: 'sine', vol: 0.5, delay: i * 0.2 })),
+  thunder:  () => { tone(60, 1.2, { type: 'sawtooth', vol: 0.5, slide: -30 }); tone(45, 1.6, { type: 'square', vol: 0.35, slide: -20, delay: 0.15 }); },
 };
 export function sfx(name) { SFX[name]?.(); }

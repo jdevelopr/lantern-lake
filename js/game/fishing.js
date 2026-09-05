@@ -25,11 +25,13 @@ export function pickFish(state, x, y, gear) {
   const zone = zoneAt(x, y);
   const season = seasonOf(state.time.day);
   const night = isNight(state.time.minute);
+  const wx = gear.wx || { dim: false, favor: () => 1 };
+  // Low light from cloud cover lets night biters show up by day, at half weight.
   const pool = FISH.filter(f =>
     f.zones.includes(zone) &&
     (f.seasons === 'all' || f.seasons.includes(season)) &&
-    (f.time === 'any' || (f.time === 'night') === night));
-  const weights = pool.map(f => f.rarity * (f.tier >= 3 ? 1 + gear.rare : 1));
+    (f.time === 'any' || (f.time === 'night' ? (night || wx.dim) : !night)));
+  const weights = pool.map(f => f.rarity * (f.tier >= 3 ? 1 + gear.rare : 1) * wx.favor(f.id) * (f.time === 'night' && !night ? 0.5 : 1));
   const total = weights.reduce((a, b) => a + b, 0);
   let roll = rand(state) * total, f = pool[pool.length - 1];
   for (let i = 0; i < pool.length; i++) { roll -= weights[i]; if (roll <= 0) { f = pool[i]; break; } }

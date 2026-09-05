@@ -9,6 +9,18 @@ engines and storage.
 
 There is also a single-player mode played on the host screen with keyboard and mouse.
 
+The look is night-film pixel art: a 640x360 canvas drawn entirely in code (no image
+files), lit by a multiply light map with warm lantern pools, halos in the rain and fog,
+reflections on wet ground and water, and a vignette over everything. Text on the canvas
+is a hand-drawn 5x7 bitmap font.
+
+**Weather** rolls in and out on its own: clear, overcast, rain, storm, fog and snow, with
+odds that depend on the season. It is part of the shared game state, so it is saved with
+the lake and shown on the phones. It changes the fishing too: rain brings faster bites and
+favours bass, trout and carp; storms shorten the hook window but tempt the big deep-water
+fish; fog favours the ghost eel and the lanternfish; cloud cover lets night biters show
+up by day at half odds; snow slows everything but suits burbot and pike.
+
 ## How to play
 
 **Host (TV):** open the game, choose *New lake*. A room code and QR code appear. Players
@@ -93,11 +105,20 @@ Pages and GitHub Pages work the same way with no configuration.
 
 ```
 index.html            all screens
-css/style.css         art direction and controller layout
+css/style.css         art direction for the HTML screens and the phone controller
 js/main.js            host or phone, decided by ?room=
 js/net.js             PeerJS transport (host-authoritative star)
 js/shared/            constants, gear and fish catalogue, roster widget
-js/game/              rules: world, fishing, reducer, per-phone projection
-js/host/              TV: loop, renderer, audio, saves, keyboard for solo mode
+js/game/              rules: world (lake shape, time), fishing, weather, reducer, projection
+js/host/              TV: loop, audio, saves, keyboard for solo mode, and the renderer:
+  gfx.js                bitmap font, light sprites, dither, palette maths, vignette
+  lake.js               baked terrain per season, water, boats, fishing overlays, lake lights
+  town.js               baked street facades, sky and hills, wet road, walker, shop menu
+  weatherfx.js          rain, snow, fog wisps, cloud shadows
+  render.js             panes, light pass, halos, particles, popups, HUD
 js/client/            phone: joystick, controller UI
+
+For tuning there is a debug hook on the host: `LL.state`, `LL.renderer`, and
+`LL.jump({ day, minute, weather, loc })` from the browser console jumps the lake to any
+time, season, weather (`clear`, `overcast`, `rain`, `storm`, `fog`, `snow`) or place.
 ```

@@ -1,10 +1,11 @@
 // The phone UI. Renders whatever projection the host last sent; holds no rules.
 import { SEASON_NAMES, clockText } from '../shared/protocol.js';
+import { weatherLabel } from '../game/weather.js';
 
 export function createController(input) {
   const $ = s => document.querySelector(s);
   const el = {
-    root: $('#controller'), name: $('#ctl-name'), gold: $('#ctl-gold'), hold: $('#ctl-hold'),
+    root: $('#controller'), name: $('#ctl-name'), gold: $('#ctl-gold'), hold: $('#ctl-hold'), weather: $('#ctl-weather'),
     prompt: $('#ctl-prompt'), reel: $('#ctl-reel'), zone: $('#reel-zone'), fish: $('#reel-fish'),
     prog: $('#reel-prog'), tension: $('#reel-tension'), power: $('#ctl-power'), powerFill: $('#ctl-power-fill'),
     menu: $('#ctl-menu'), btnA: $('#btn-a'), btnB: $('#btn-b'),
@@ -16,6 +17,7 @@ export function createController(input) {
     el.gold.textContent = `${v.gold} g`;
     el.hold.textContent = `hold ${v.hold}/${v.cap}`;
     el.hold.style.color = v.hold >= v.cap ? 'var(--danger)' : '';
+    el.weather.textContent = v.weather ? `${v.weather.k > 0.5 || v.weather.kind === 'clear' ? weatherLabel(v.weather.kind) : 'Clearing'}  ${clockText(v.minute)}` : '';
     el.btnA.textContent = v.aLabel || 'Cast';
 
     const f = v.fishing;
