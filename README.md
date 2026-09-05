@@ -9,10 +9,10 @@ engines and storage.
 
 There is also a single-player mode played on the host screen with keyboard and mouse.
 
-The look is night-film pixel art: a 640x360 canvas drawn entirely in code (no image
-files), lit by a multiply light map with warm lantern pools, halos in the rain and fog,
-reflections on wet ground and water, and a vignette over everything. Text on the canvas
-is a hand-drawn 5x7 bitmap font. The camera sits a quarter closer than the canvas and
+The look is clean pixel art: a 640x360 canvas drawn entirely in code (no image files),
+lit by a light map that keeps the scene readable at every hour, with smooth warm pools
+from lanterns, windows and stoves, and reflections on wet ground and water. Text on the
+canvas is a hand-drawn 5x7 bitmap font. The camera sits a quarter closer than the canvas and
 follows your boat or walker (and comes in a little further indoors); two boats share one
 view until they drift apart, then the screen splits.
 

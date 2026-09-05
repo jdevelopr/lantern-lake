@@ -2,13 +2,13 @@
 // Everything is snapped to whole pixels; nothing is anti-aliased on purpose.
 //
 // Frame: scene (baked terrain + animated layers + actors) -> light map multiplied
-// on top (ambient mood + warm light pools) -> halos and weather in the air ->
-// vignette -> HUD. Split screen runs the same pass per pane.
+// on top (time-of-day base + smooth warm light pools) -> weather in the air -> HUD.
+// Split screen runs the same pass per pane.
 import { WORLD, TOWN, DOCK, ROOMS, lakeNorm, lightAt, seasonOf, dayOfSeason } from '../game/world.js';
 import { gearStats } from '../shared/catalog.js';
 import { SEASON_NAMES, clockText } from '../shared/protocol.js';
 import { weatherMods, weatherLabel } from '../game/weather.js';
-import { mkCanvas, R, hash, mix, scale, clamp, text, textWidth, drawLight, makeVignette, sprite } from './gfx.js';
+import { mkCanvas, R, hash, mix, scale, clamp, text, textWidth, drawLight, sprite } from './gfx.js';
 import { buildLakeBackground, drawWater, drawBoat, drawFishing, lakeLights, drawReflections } from './lake.js';
 import { drawTown, townLights, drawMenu } from './town.js';
 import { drawRoom, roomLights, roomPopup } from './room.js';
@@ -37,7 +37,6 @@ export function createRenderer(canvas) {
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
   const [light, lx] = mkCanvas(W, H);
-  const vignette = makeVignette(W, H, 0.6);
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const wfx = createWeatherFx(reduceMotion);
   let bg = null, bgSeason = -1;
@@ -58,13 +57,15 @@ export function createRenderer(canvas) {
   const px = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(R(x), R(y), R(w), R(h)); };
 
   /* ---------------------------------------------------------- mood --- */
+  // Base light level: clear by day, a readable blue by night. Kept light on purpose so
+  // the scene stays legible; the lamps add warmth rather than rescuing a dark frame.
   function ambientColor(light, wx) {
     const eff = light * (1 - wx.sky);
     const dusk = 1 - Math.abs(light * 2 - 1);
-    let a = mix('#2e3a5a', '#e0dbce', eff);
-    a = mix(a, '#d08a58', dusk * 0.5 * (1 - wx.sky));
-    if (wx.sky > 0) a = mix(a, '#6a7890', wx.sky * 0.45 * (0.4 + 0.6 * light));
-    if (wx.kind === 'fog') a = mix(a, '#8a939f', wx.k * 0.3);
+    let a = mix('#6f7c9c', '#fbfaf7', eff);
+    a = mix(a, '#e8b48a', dusk * 0.3 * (1 - wx.sky));
+    if (wx.sky > 0) a = mix(a, '#9aa4b4', wx.sky * 0.3 * (0.4 + 0.6 * light));
+    if (wx.kind === 'fog') a = mix(a, '#aab1ba', wx.k * 0.25);
     return { color: a, eff };
   }
 
@@ -72,9 +73,9 @@ export function createRenderer(canvas) {
   function lightPass(pane, state, lights, lightLvl, wx, indoor = false) {
     const cam = pane.cam;
     let { color, eff } = ambientColor(lightLvl, wx);
-    // Indoors the daylight only comes through the windows, so the base mood is dimmer
-    // and the pools (window light, lamps, stoves) carry the room.
-    if (indoor) color = mix(color, '#262a38', 0.16 + 0.3 * eff);
+    // Indoors the daylight only comes through the windows, so the base is a touch
+    // softer and the pools (window light, lamps, stoves) add the warmth.
+    if (indoor) color = mix(color, '#7a8296', 0.08 + 0.2 * eff);
     const dark = 1 - eff;
     lx.globalCompositeOperation = 'source-over';
     lx.fillStyle = color; lx.fillRect(0, 0, W, H);
@@ -86,12 +87,6 @@ export function createRenderer(canvas) {
     if (flash > 0) { lx.fillStyle = `rgba(210,220,255,${Math.min(1, flash) * (indoor ? 0.5 : 0.85)})`; lx.fillRect(0, 0, W, H); }
     ctx.globalCompositeOperation = 'multiply';
     ctx.drawImage(light, cam.x, cam.y);
-    // Halos: light scattering in the air, much stronger in rain and fog. Indoors it is
-    // only dust and smoke, so a faint bloom around the lamps.
-    const airy = indoor ? 0.1 : wx.kind === 'fog' ? 0.6 : wx.kind === 'rain' || wx.kind === 'storm' ? 0.45 : wx.kind === 'snow' ? 0.35 : 0.08;
-    const haloA = indoor ? 0.1 + 0.08 * dark : (0.08 + airy * wx.k) * (0.3 + 0.7 * dark) + (wx.kind === 'clear' ? 0.08 * dark : 0);
-    ctx.globalCompositeOperation = 'screen';
-    for (const L of lights) if (!L.win) drawLight(ctx, L.x, L.y, L.r * (0.8 + airy * 0.7), L.color, haloA * L.a, 4, 0.6);
     ctx.globalCompositeOperation = 'source-over';
   }
 
@@ -334,10 +329,6 @@ export function createRenderer(canvas) {
       if (pane.player?.menu && pane.world !== 'lake') drawMenu(G, state, pane.player, { x: pane.x, y: pane.y }, pane.w, pane.h);
       if (panes.length > 1 && pane.x > 0) px(pane.x - 1, 0, 2, H, '#07080c');
     }
-    ctx.globalCompositeOperation = 'multiply';
-    ctx.drawImage(vignette, 0, 0);
-    ctx.globalCompositeOperation = 'source-over';
-
     const hudPanes = panes.length === 1 && active.length > 1
       ? active.map((p, i) => ({ x: i * (W / active.length), w: W / active.length, player: p }))
       : panes;

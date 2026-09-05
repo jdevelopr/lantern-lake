@@ -100,6 +100,7 @@ export function buildLakeBackground(season) {
   const [c, g] = mkCanvas(W, H);
   const img = g.createImageData(W, H), d = img.data;
   const put = (i, col) => { const [r, gg, b] = col; d[i] = r; d[i + 1] = gg; d[i + 2] = b; d[i + 3] = 255; };
+  const lerpC = (a, b, t) => { t = Math.max(0, Math.min(1, t)); return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; };
   const P = {};
   for (const k in S) if (S[k]) P[k] = rgb(S[k]);
   // Per-pixel terrain: grass with noise, sand ring, banded water.
@@ -111,22 +112,22 @@ export function buildLakeBackground(season) {
       if (nz < 0.1) col = P.grass2; else if (nz > 0.94) col = P.grass3;
       // soft blotches of darker and lighter grass, dithered at the edges
       const blob = Math.sin(x * 0.021 + y * 0.013) + Math.sin(y * 0.033 - x * 0.009) + Math.sin((x + y) * 0.007);
-      if (blob > 1.0 && dith(x, y, (blob - 1.0) * 1.2)) col = P.grass2;
-      else if (blob < -1.2 && dith(x, y, (-1.2 - blob) * 1.2)) col = P.grass3;
+      if (blob > 1.0) col = lerpC(col, P.grass2, (blob - 1.0) * 1.2);
+      else if (blob < -1.2) col = lerpC(col, P.grass3, (-1.2 - blob) * 1.2);
       // darker towards the edges of the screen: the forest closes in
       const edge = Math.max(0, Math.min(1, (Math.min(x, W - x, y, H - y) - 14) / 60));
-      if (dith(x, y, (1 - edge) * 0.9)) col = col.map(v => v * 0.72);
+      col = col.map(v => v * (1 - 0.28 * (1 - edge) * 0.9));
       put(i, col);
     } else if (n >= 1) {
       // sand: dry outside, wet and darker at the water's edge, dithered between
       const t = (n - 1) / 0.1;
-      put(i, dith(x, y, t * 1.4) ? P.sand : P.sandWet);
+      put(i, lerpC(P.sandWet, P.sand, t * 1.4));
     } else {
       const dn = deepNorm(x, y);
       let col;
-      if (dn < 0.72) col = dith(x, y, (0.72 - dn) * 1.6) ? P.deep2 : P.deep;
-      else if (dn < 1.05) col = dith(x, y, (1.05 - dn) / 0.33) ? P.deep : P.water;
-      else if (n > 0.78) col = dith(x, y, (n - 0.78) / 0.22) ? P.shallow : P.water;
+      if (dn < 0.72) col = lerpC(P.deep, P.deep2, (0.72 - dn) * 1.6);
+      else if (dn < 1.05) col = lerpC(P.water, P.deep, (1.05 - dn) / 0.33);
+      else if (n > 0.78) col = lerpC(P.water, P.shallow, (n - 0.78) / 0.22);
       else col = P.water;
       if (season === 3 && n > 0.9 && hash(x, y, 5) > 0.35) col = [0xb9, 0xc8, 0xd0];
       // subtle water noise

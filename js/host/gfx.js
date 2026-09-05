@@ -35,30 +35,24 @@ export function grade(c, sat = 0.78, cool = 0.06) {
 /** Blend a scene colour towards the lighting mood (used for things baked into backgrounds). */
 export function tint(c, mood, k) { return mix(c, mood, k); }
 
-/* ----------------------------------------------------------- dither --- */
-// 4x4 Bayer matrix, so a level 0..16 gives that many lit cells per 4x4 tile.
+/* ------------------------------------------------------------ blends --- */
+// These used to be 4x4 Bayer dithers. They now resolve to plain translucent colours so
+// every blend (light shafts, fog, shadows, sky bands, terrain edges) is smooth.
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 export const bayer = (x, y) => BAYER[((y & 3) << 2) | (x & 3)];
-/** True for the pixels that a dither of strength t (0..1) should paint. */
-export const dith = (x, y, t) => bayer(x, y) < t * 16;
-
-const patternCache = new Map();
-/** A CanvasPattern painting `color` on a fraction `t` of pixels. Cached. */
+/** Kept for callers that pick one of two colours per pixel: a plain threshold now. */
+export const dith = (x, y, t) => t >= 0.5;
+/** A fillStyle painting `color` at opacity `t` (0..1). */
 export function ditherPattern(ctx, color, t) {
-  const lvl = clamp(R(t * 16), 0, 16), key = color + '|' + lvl;
-  let p = patternCache.get(key);
-  if (p) return p;
-  const [c, g] = mkCanvas(4, 4);
-  g.fillStyle = color;
-  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) if (bayer(x, y) < lvl) g.fillRect(x, y, 1, 1);
-  p = ctx.createPattern(c, 'repeat');
-  patternCache.set(key, p);
-  return p;
+  const a = clamp(t, 0, 1);
+  const m = typeof color === 'string' && color.startsWith('rgba') ? color.match(/[\d.]+/g) : null;
+  const base = m ? +m[3] : 1;
+  const [r, g, b] = rgb(color);
+  return `rgba(${r | 0},${g | 0},${b | 0},${(a * base).toFixed(3)})`;
 }
 export function ditherRect(ctx, x, y, w, h, color, t) {
   if (t <= 0) return;
-  if (t >= 1) { ctx.fillStyle = color; ctx.fillRect(R(x), R(y), R(w), R(h)); return; }
-  ctx.fillStyle = ditherPattern(ctx, color, t);
+  ctx.fillStyle = t >= 1 ? color : ditherPattern(ctx, color, t);
   ctx.fillRect(R(x), R(y), R(w), R(h));
 }
 
@@ -81,12 +75,12 @@ export function ellipse(c, x, y, rx, ry, color) {
 /* ----------------------------------------------------------- lights --- */
 const lightCache = new Map();
 /**
- * A stepped, dithered radial light sprite: bright core, 4 bands, checker fringe.
- * Draw it with 'lighter' onto the light map. Cached per (r, colour, steps).
+ * A smooth radial light sprite: bright core, soft falloff to nothing at r.
+ * Draw it with 'lighter' onto the light map. Cached per (r, colour, core).
  */
 export function lightSprite(r, color, steps = 5, core = 0.9) {
   r = R(r);
-  const key = `${r}|${color}|${steps}|${core}`;
+  const key = `${r}|${color}|${core}`;
   let c = lightCache.get(key);
   if (c) return c;
   const size = r * 2 + 3;
@@ -97,10 +91,7 @@ export function lightSprite(r, color, steps = 5, core = 0.9) {
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
     const dd = Math.hypot(x - cx, y - cy) / r;
     if (dd > 1) continue;
-    // quantise falloff into bands, dither between neighbours
-    const f = (1 - dd) ** 1.6 * core;
-    const q = f * steps, lo = Math.floor(q), frac = q - lo;
-    const lvl = (lo + (dith(x, y, frac) ? 1 : 0)) / steps;
+    const lvl = (1 - dd) ** 1.6 * core;
     const i = (y * size + x) * 4;
     d[i] = cr * lvl; d[i + 1] = cg * lvl; d[i + 2] = cb * lvl; d[i + 3] = 255;
   }
@@ -116,19 +107,10 @@ export function drawLight(g, x, y, r, color, alpha = 1, steps = 5, core = 0.9) {
 }
 
 /* --------------------------------------------------------- vignette --- */
-export function makeVignette(w, h, strength = 0.55) {
+/** No vignette any more: a plain white canvas, so multiplying it changes nothing. */
+export function makeVignette(w, h, strength = 0) {
   const [c, g] = mkCanvas(w, h);
-  const img = g.createImageData(w, h), d = img.data;
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const nx = (x / w - 0.5) * 2, ny = (y / h - 0.5) * 2;
-    const dd = Math.sqrt(nx * nx * 0.85 + ny * ny * 1.15);
-    const f = clamp((dd - 0.55) / 0.75, 0, 1) ** 1.7 * strength;
-    const q = f * 6, lo = Math.floor(q), frac = q - lo;
-    const lvl = 1 - (lo + (dith(x, y, frac) ? 1 : 0)) / 6;
-    const i = (y * w + x) * 4;
-    d[i] = 255 * lvl; d[i + 1] = 255 * lvl; d[i + 2] = 255 * lvl; d[i + 3] = 255;
-  }
-  g.putImageData(img, 0, 0);
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
   return c;
 }
 

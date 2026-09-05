@@ -257,9 +257,9 @@ function drawSky(G, cam, pw, ph, state) {
   for (let i = 0; i < n; i++) {
     const x = ((hash(i, 51) * 1400 + clock * (3 + i * 0.7) * (1 + (wx.wind || 0))) % (pw + 300)) - 150 + cam.x, y = 20 + hash(i, 52) * 90 + cam.y;
     const w = 40 + hash(i, 53) * 60, col = mix(mix(hor, '#ffffff', 0.15 * eff), '#3e4652', wx.sky * 0.8);
-    ctx.fillStyle = ditherPattern(ctx, col, wx.sky > 0 ? 0.8 : 0.55);
+    ctx.fillStyle = ditherPattern(ctx, col, wx.sky > 0 ? 0.45 : 0.3);
     for (let k = 0; k < 4; k++) { const cx = x + k * w / 4, r = 6 + hash(i, k) * 8; disc2(ctx, cx, y + (k % 2) * 3, r); }
-    ctx.fillStyle = ditherPattern(ctx, scale(col, 0.85), 0.5); ctx.fillRect(R(x), R(y + 6), R(w), 3);
+    ctx.fillStyle = ditherPattern(ctx, scale(col, 0.85), 0.25); ctx.fillRect(R(x), R(y + 6), R(w), 3);
   }
 }
 function disc2(ctx, x, y, r) { for (let dy = -r; dy <= r; dy++) { const half = Math.floor(Math.sqrt(r * r - dy * dy) * 1.4); ctx.fillRect(R(x - half), R(y + dy * 0.7), half * 2 + 1, 1); } }
