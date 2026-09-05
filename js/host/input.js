@@ -2,7 +2,7 @@
 // shape a phone sends, so the rules never know which device is playing.
 export function createLocalInput(onChange) {
   const keys = new Set();
-  const state = { x: 0, y: 0, a: false, an: 0, pull: 0, back: 0, sel: -1, selN: 0 };
+  const state = { x: 0, y: 0, a: false, an: 0, pull: 0, back: 0, sel: -1, selN: 0, jn: 0, jd: 0, jsN: 0 };
   let enabled = false;
 
   const recompute = () => {
@@ -23,6 +23,7 @@ export function createLocalInput(onChange) {
     if (e.repeat) return;
     if (e.code === 'KeyE' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') { state.pull++; return onChange({ pull: state.pull }); }
     if (e.code === 'Escape' || e.code === 'Backspace') { state.back++; return onChange({ back: state.back }); }
+    if (e.code === 'KeyJ') { state.jn++; return onChange({ jn: state.jn }); }
     keys.add(e.code); recompute();
   };
   const up = e => { if (keys.delete(e.code)) recompute(); };

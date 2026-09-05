@@ -88,8 +88,22 @@
       <span id="ctl-gold" class="ctl-gold"></span>
       <span id="ctl-hold" class="ctl-hold"></span>
       <span id="ctl-weather" class="ctl-weather"></span>
+      <button id="btn-journal" class="btn-journal" type="button" hidden>Journal</button>
     </div>
     <div class="ctl-mid">
+      <div id="ctl-card" class="catch-card" hidden>
+        <canvas id="card-art" width="128" height="64"></canvas>
+        <div class="card-text"><b id="card-name"></b><span id="card-meta"></span><em id="card-new">New species</em></div>
+      </div>
+      <div id="ctl-journal" class="journal" hidden>
+        <div class="journal-head"><span>Fish journal</span><span id="journal-page"></span></div>
+        <div class="journal-art"><canvas id="journal-art" width="128" height="64"></canvas></div>
+        <b id="journal-name"></b>
+        <p id="journal-stats"></p>
+        <dl id="journal-info"></dl>
+        <p id="journal-totals"></p>
+        <div class="journal-nav"><button id="journal-prev" type="button">&lt; Prev</button><button id="journal-next" type="button">Next &gt;</button></div>
+      </div>
       <p id="ctl-prompt" class="ctl-prompt"></p>
       <div id="ctl-reel" class="reel" hidden>
         <div class="reel-track">

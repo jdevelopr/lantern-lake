@@ -1,7 +1,7 @@
 // Phone joystick + buttons, plus a keyboard fallback for laptop joiners.
 // Emits partial input objects; analog changes are throttled to ~20 Hz.
 export function createInput({ stick, knob, btnA, btnB, btnBack, onChange }) {
-  const state = { x: 0, y: 0, a: false, an: 0, pull: 0, back: 0, sel: -1, selN: 0 };
+  const state = { x: 0, y: 0, a: false, an: 0, pull: 0, back: 0, sel: -1, selN: 0, jn: 0, jd: 0, jsN: 0 };
   let enabled = false, pending = null, timer = null;
   const buzz = ms => { try { navigator.vibrate?.(ms); } catch {} };
 
@@ -60,6 +60,7 @@ export function createInput({ stick, knob, btnA, btnB, btnBack, onChange }) {
     if (e.code === 'Space') { state.a = true; state.an++; btnA.classList.add('pressed'); return sendNow({ a: true, an: state.an }); }
     if (e.code === 'KeyE' || e.code.startsWith('Shift')) { state.pull++; return sendNow({ pull: state.pull }); }
     if (e.code === 'Escape' || e.code === 'Backspace') { state.back++; return sendNow({ back: state.back }); }
+    if (e.code === 'KeyJ') { state.jn++; return sendNow({ jn: state.jn }); }
     keys.add(e.code); recompute();
   });
   addEventListener('keyup', e => {
@@ -71,6 +72,8 @@ export function createInput({ stick, knob, btnA, btnB, btnBack, onChange }) {
     enable(v) { enabled = v; },
     reset() { state.an = state.pull = state.back = state.selN = 0; state.a = false; },
     select(i) { state.sel = i; state.selN++; buzz(8); sendNow({ sel: i, selN: state.selN }); },
+    journal() { state.jn++; buzz(8); sendNow({ jn: state.jn }); },
+    step(d) { state.jd = d; state.jsN++; buzz(6); sendNow({ jd: d, jsN: state.jsN }); },
     buzz,
   };
 }

@@ -1,7 +1,8 @@
 // Host-only rules. Pure over state: no DOM, no network. Randomness via rand(state).
 import { GEAR, GEAR_KEYS, gearStats, FISH_BY_ID } from '../shared/catalog.js';
 import { PLAYER_COLORS, MIN_PER_SEC, DAY_MINUTES, SEASON_DAYS } from '../shared/protocol.js';
-import { WORLD, TOWN, ROCKS, DOCK, BUILDINGS, BUILDING_BY_ID, ROOMS, clampToLake, nearDock, seasonOf } from './world.js';
+import { WORLD, TOWN, ROCKS, DOCK, BUILDINGS, BUILDING_BY_ID, ROOMS, clampToLake, nearDock, seasonOf, zoneAt } from './world.js';
+import { FISH } from '../shared/catalog.js';
 import { rand, castPower, pickFish, startReel, tickReel } from './fishing.js';
 import { initWeather, coerceWeather, tickWeather, weatherMods } from './weather.js';
 
@@ -13,6 +14,7 @@ export function initState(seed = 1) {
       gold: 40, rod: 0, line: 0, bait: 0, baitCount: 0, boat: 0, engine: 0, storage: 0,
       earned: 0, caught: 0, best: null, log: {},
       slab: [],   // the last catch sold, laid out on the fishmonger's ice
+      journal: false,   // the Fish Journal upgrade, sold at the tackle shop
     },
     weather: initWeather(),
     players: {},
@@ -20,7 +22,8 @@ export function initState(seed = 1) {
   };
 }
 
-const emptyInput = () => ({ x: 0, y: 0, a: false, an: 0, pull: 0, back: 0, sel: -1, selN: 0 });
+const emptyInput = () => ({ x: 0, y: 0, a: false, an: 0, pull: 0, back: 0, sel: -1, selN: 0, jn: 0, jd: 0, jsN: 0 });
+export const JOURNAL_PRICE = 350;
 
 export function addPlayer(state, seat, cid, name, saved = null) {
   const p = {
@@ -30,11 +33,11 @@ export function addPlayer(state, seat, cid, name, saved = null) {
     door: null,           // { t, done, to } while fading through a doorway
     boat: { x: DOCK.spawn.x + seat * 26, y: DOCK.spawn.y - seat * 6, vx: 0, vy: 0, heading: -Math.PI / 2 },
     walk: { x: 90, dir: 1, moving: false, t: 0 },
-    fishing: null, menu: null, hold: [], prompt: '',
-    stats: { caught: 0, earned: 0, best: null },
+    fishing: null, menu: null, journal: null, hold: [], prompt: '',
+    stats: { caught: 0, earned: 0, best: null, log: {} },
     input: emptyInput(), prev: emptyInput(),
   };
-  if (saved) { p.hold = saved.hold || []; p.stats = saved.stats || p.stats; p.name = saved.name || name; }
+  if (saved) { p.hold = saved.hold || []; p.stats = { ...p.stats, ...(saved.stats || {}) }; p.stats.log = p.stats.log || {}; p.name = saved.name || name; }
   state.players[seat] = p;
   return p;
 }
@@ -75,8 +78,11 @@ function tick(state, dt) {
         pressA: inp.an !== prev.an, releaseA: !inp.a,
         pulled: inp.pull !== prev.pull, back: inp.back !== prev.back,
         sel: inp.selN !== prev.selN ? inp.sel : -1,
+        journal: inp.jn !== prev.jn, jstep: inp.jsN !== prev.jsN ? inp.jd : 0,
       };
-      if (p.door) tickDoor(state, p, dt);
+      if (edge.journal && !p.door) toggleJournal(state, p);
+      if (p.journal) tickJournal(state, p, edge, dt);
+      else if (p.door) tickDoor(state, p, dt);
       else if (p.loc === 'lake') tickLake(state, p, edge, gear, dt);
       else if (p.loc === 'room') tickRoom(state, p, edge, gear, dt);
       else tickTown(state, p, edge, gear, dt);
@@ -205,7 +211,12 @@ function tickLake(state, p, edge, gear, dt) {
         const rec = { name: fish.name, weight: fish.weight, by: p.name, seat: p.seat };
         if (!p.stats.best || fish.weight > p.stats.best.weight) p.stats.best = rec;
         if (!state.empire.best || fish.weight > state.empire.best.weight) state.empire.best = rec;
-        state.events.push({ n: 'caught', seat: p.seat, fish, x: f.bx, y: f.by });
+        // the player's own journal entry: count, best, worth, and the first time and place
+        const zone = zoneAt(f.bx, f.by), L = (p.stats.log[fish.id] = p.stats.log[fish.id] || { n: 0, best: 0, worth: 0, first: null });
+        L.n++; L.worth += fish.price;
+        if (fish.weight > L.best) { L.best = fish.weight; L.bestDay = state.time.day; }
+        if (!L.first) L.first = { day: state.time.day, minute: Math.floor(state.time.minute), zone, weather: state.weather?.kind || 'clear' };
+        state.events.push({ n: 'caught', seat: p.seat, fish, x: f.bx, y: f.by, isNew: L.n === 1, zone });
       } else if (r === 'lost') {
         f.stage = 'lost'; f.t = 1.2; f.reason = 'Line snapped';
         state.events.push({ n: 'snap', seat: p.seat, x: f.bx, y: f.by });
@@ -321,6 +332,7 @@ export function shopItems(state, shop, p) {
     }
   } else if (shop === 'tackle') {
     items.push(upgrade('rod'), upgrade('line'));
+    if (!e.journal) items.push({ kind: 'journal', label: 'Fish journal', desc: 'Every fish: art, when and where', price: JOURNAL_PRICE, enabled: e.gold >= JOURNAL_PRICE });
     for (let i = 1; i < GEAR.bait.length; i++) {
       const b = GEAR.bait[i];
       const owned = e.bait === i ? ` (${e.baitCount} left)` : '';
@@ -362,6 +374,9 @@ function tickMenu(state, p, edge, gear, dt) {
   } else if (it.kind === 'buy') {
     e.gold -= it.price; e[it.key]++;
     state.events.push({ n: 'buy', seat: p.seat, label: it.label, key: it.key });
+  } else if (it.kind === 'journal') {
+    e.gold -= it.price; e.journal = true;
+    state.events.push({ n: 'buy', seat: p.seat, label: it.label, key: 'journal' });
   } else if (it.kind === 'bait') {
     e.gold -= it.price;
     if (e.bait === it.key) e.baitCount += 10; else { e.bait = it.key; e.baitCount = 10; }
@@ -369,6 +384,30 @@ function tickMenu(state, p, edge, gear, dt) {
   }
   m.items = shopItems(state, m.shop, p);
   m.cursor = Math.min(m.cursor, m.items.length - 1);
+}
+
+/* ------------------------------------------------------------ journal --- */
+
+function toggleJournal(state, p) {
+  if (p.journal) { p.journal = null; state.events.push({ n: 'close', seat: p.seat }); return; }
+  if (!state.empire.journal) { state.events.push({ n: 'nojournal', seat: p.seat }); return; }
+  const busy = p.fishing && !['caught', 'lost'].includes(p.fishing.stage);
+  if (busy) { state.events.push({ n: 'nope', seat: p.seat }); return; }
+  p.menu = null; p.boat.vx = p.boat.vy = 0; p.walk.moving = false;
+  // open on the last species caught, or the first page
+  const idx = Math.max(0, FISH.findIndex(f => p.stats.log[f.id]));
+  p.journal = { idx, nav: 0 };
+  state.events.push({ n: 'open', seat: p.seat });
+}
+function tickJournal(state, p, edge, dt) {
+  const j = p.journal, inp = p.input, n = FISH.length;
+  p.prompt = ''; p.aLabel = 'Close'; p.near = null;
+  j.nav = Math.max(0, j.nav - dt);
+  let step = edge.jstep;
+  if (!step && j.nav === 0 && Math.abs(inp.x) > 0.5) { step = inp.x > 0 ? 1 : -1; j.nav = 0.24; }
+  if (Math.abs(inp.x) <= 0.5 && !edge.jstep) j.nav = Math.min(j.nav, 0.0);
+  if (step) { j.idx = (j.idx + step + n) % n; state.events.push({ n: 'ui', seat: p.seat }); }
+  if (edge.back || edge.pressA) { p.journal = null; state.events.push({ n: 'close', seat: p.seat }); }
 }
 
 /* --------------------------------------------------------------- save --- */

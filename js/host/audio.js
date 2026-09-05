@@ -61,6 +61,7 @@ const SFX = {
   knock:    () => { tone(180, 0.05, { type: 'square', vol: 0.4 }); tone(170, 0.05, { type: 'square', vol: 0.4, delay: 0.14 }); },
   talk:     () => { tone(520, 0.05, { type: 'triangle', vol: 0.4 }); tone(660, 0.07, { type: 'triangle', vol: 0.4, delay: 0.07 }); },
   enter:    () => {},
+  nojournal:() => tone(300, 0.1, { type: 'triangle', vol: 0.3 }),
 };
 export function sfx(name) { SFX[name]?.(); }
 

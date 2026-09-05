@@ -12,14 +12,17 @@ import { mkCanvas, R, hash, mix, scale, clamp, text, textWidth, drawLight, sprit
 import { buildLakeBackground, drawWater, drawBoat, drawFishing, lakeLights, drawReflections } from './lake.js';
 import { drawTown, townLights, drawMenu } from './town.js';
 import { drawRoom, roomLights, roomPopup } from './room.js';
+import { drawFishArt } from '../shared/fishart.js';
+import { journalPage, journalTotals, list } from '../shared/journal.js';
+import { FISH } from '../shared/catalog.js';
 import { createWeatherFx } from './weatherfx.js';
 
 const W = WORLD.w, H = WORLD.h;
-// The camera sits a quarter closer than the canvas: a pane of pw x ph pixels shows
-// pw/ZOOM x ph/ZOOM of the world, following the player's boat or walker.
-export const ZOOM = 1.25;
-// Indoors the camera comes in a little further: a room is a small place.
-export const ROOM_ZOOM = 1.6;
+// Virtual resolution. The canvas is sized so that an integer scale fills the screen
+// exactly, with about this many world pixels across: a quarter closer than the old
+// 640 outdoors, closer still in a room. Every world pixel is then the same size on
+// screen and nothing ever lands between two of them.
+const VIEW = { out: 512, room: 400 };
 
 const ICON = {
   coin: sprite(['.###.', '#.#.#', '##.##', '#.#.#', '.###.'], { '#': '#e8b04a', '.': null }),
@@ -33,10 +36,25 @@ const ICON = {
   snow: sprite(['#.#.#', '.###.', '##.##', '.###.', '#.#.#'], { '#': '#e6eef4' }),
 };
 
+/**
+ * Everything drawn through this context lands on whole pixels: fillRect, strokeRect,
+ * drawImage and translate are rounded, so nothing is ever anti-aliased between two
+ * pixels, whatever fractional maths produced it.
+ */
+export function snapCtx(ctx) {
+  const fr = ctx.fillRect.bind(ctx), sr = ctx.strokeRect.bind(ctx), di = ctx.drawImage.bind(ctx), tr = ctx.translate.bind(ctx);
+  const snapBox = (x, y, w, h) => { const x0 = Math.round(x), y0 = Math.round(y); return [x0, y0, Math.max(w > 0 ? 1 : 0, Math.round(x + w) - x0), Math.max(h > 0 ? 1 : 0, Math.round(y + h) - y0)]; };
+  ctx.fillRect = (x, y, w, h) => fr(...snapBox(x, y, w, h));
+  ctx.strokeRect = (x, y, w, h) => { const b = snapBox(x, y, w, h); sr(b[0] + 0.5, b[1] + 0.5, b[2] - 1, b[3] - 1); };
+  ctx.drawImage = (...a) => { if (a.length === 3) di(a[0], Math.round(a[1]), Math.round(a[2])); else if (a.length === 5) di(a[0], Math.round(a[1]), Math.round(a[2]), Math.round(a[3]), Math.round(a[4])); else di(...a); };
+  ctx.translate = (x, y) => tr(Math.round(x), Math.round(y));
+  return ctx;
+}
+
 export function createRenderer(canvas) {
-  const ctx = canvas.getContext('2d');
+  const ctx = snapCtx(canvas.getContext('2d'));
   ctx.imageSmoothingEnabled = false;
-  const [light, lx] = mkCanvas(W, H);
+  let light, lx, CW = W, CH = H, K = 1, mode = '', fitW = 0, fitH = 0;
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const wfx = createWeatherFx(reduceMotion);
   let bg = null, bgSeason = -1;
@@ -45,14 +63,20 @@ export function createRenderer(canvas) {
   const ambient = [];         // seasonal drift particles
   const fx = [];              // event particles {world, x, y, vx, vy, life, color, g}
   const popups = [];          // floating text
+  const cards = {};           // catch cards per seat {fish, isNew, t, max}
 
-  function resize() {
-    const s = Math.max(1, Math.floor(Math.min(innerWidth / W, innerHeight / H)));
-    const fit = Math.min(innerWidth / W, innerHeight / H);
-    const sc = fit < 1 ? fit : s;
-    canvas.style.width = `${W * sc}px`; canvas.style.height = `${H * sc}px`;
+  /** Pick the integer scale for this scene and size the backing canvas to fill the screen. */
+  function fit(m) {
+    if (m === mode && fitW === innerWidth && fitH === innerHeight) return;
+    mode = m; fitW = innerWidth; fitH = innerHeight;
+    K = Math.max(1, Math.round(innerWidth / VIEW[m]));
+    CW = Math.max(256, Math.floor(innerWidth / K)); CH = Math.max(144, Math.floor(innerHeight / K));
+    canvas.width = CW; canvas.height = CH; ctx.imageSmoothingEnabled = false;
+    canvas.style.width = `${CW * K}px`; canvas.style.height = `${CH * K}px`;
+    [light, lx] = mkCanvas(CW, CH);
   }
-  addEventListener('resize', resize); resize();
+  function resize() { fit(mode || 'out'); }
+  addEventListener('resize', () => { fitW = 0; resize(); }); fit('out');
 
   const px = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(R(x), R(y), R(w), R(h)); };
 
@@ -78,13 +102,13 @@ export function createRenderer(canvas) {
     if (indoor) color = mix(color, '#7a8296', 0.08 + 0.2 * eff);
     const dark = 1 - eff;
     lx.globalCompositeOperation = 'source-over';
-    lx.fillStyle = color; lx.fillRect(0, 0, W, H);
+    lx.fillStyle = color; lx.fillRect(0, 0, CW, CH);
     lx.globalCompositeOperation = 'lighter';
     // Moonlight: a broad cool wash on clear nights
     if (!indoor && eff < 0.6 && wx.sky < 0.5) drawLight(lx, pane.vw * 0.72, 30, 170, '#33456e', (0.6 - eff) * (1 - wx.sky * 2) * 0.9, 6, 0.7);
     for (const L of lights) drawLight(lx, L.x - cam.x, L.y - cam.y, L.r, L.color, L.a * (L.fixed ? 1 : 0.22 + 0.78 * dark), 5, L.win ? 0.7 : 0.95);
     const flash = state.weather?.flash || 0;
-    if (flash > 0) { lx.fillStyle = `rgba(210,220,255,${Math.min(1, flash) * (indoor ? 0.5 : 0.85)})`; lx.fillRect(0, 0, W, H); }
+    if (flash > 0) { lx.fillStyle = `rgba(210,220,255,${Math.min(1, flash) * (indoor ? 0.5 : 0.85)})`; lx.fillRect(0, 0, CW, CH); }
     ctx.globalCompositeOperation = 'multiply';
     ctx.drawImage(light, cam.x, cam.y);
     ctx.globalCompositeOperation = 'source-over';
@@ -169,6 +193,7 @@ export function createRenderer(canvas) {
   function tickFx(dt) {
     for (let i = fx.length - 1; i >= 0; i--) { const f = fx[i]; f.x += f.vx * dt; f.y += f.vy * dt; f.vy += (f.g || 0) * dt; f.life -= dt; if (f.life <= 0) fx.splice(i, 1); }
     for (let i = popups.length - 1; i >= 0; i--) { popups[i].life -= dt; if (popups[i].life <= 0) popups.splice(i, 1); }
+    for (const k in cards) { cards[k].t -= dt; if (cards[k].t <= 0) delete cards[k]; }
     shake = Math.max(0, shake - dt * 14);
   }
   function burst(world, x, y, n, colors, spd = 40, g = 60) {
@@ -202,10 +227,12 @@ export function createRenderer(canvas) {
       case 'caught': {
         const f = ev.fish;
         burst('lake', ev.x, ev.y, 22, ['#ffe27a', '#ffffff', f.color], 60, 90);
-        if (b) popup('lake', b.x, b.y - 38, f.name, f.tier >= 3 ? '#f2c14e' : '#ffffff', 2.2, f.tier >= 3, `${f.weight} kg  ${f.price} g`);
+        if (b) popup('lake', b.x, b.y - 38, ev.isNew ? 'New species!' : f.name, f.tier >= 3 ? '#f2c14e' : '#ffffff', 1.6, false);
+        cards[ev.seat] = { fish: f, isNew: !!ev.isNew, t: 3.6, max: 3.6 };
         if (!reduceMotion) shake = f.tier >= 3 ? 4 : 2;
         break;
       }
+      case 'nojournal': if (p) popup(p.loc === 'lake' ? 'lake' : tw, p.loc === 'lake' ? b.x : wk.x, (p.loc === 'lake' ? b.y : TOWN.ground) - 40, 'Journal: tackle shop, 350 g', '#98a4b2', 1.8); break;
       case 'holdfull': if (b) popup('lake', b.x, b.y - 30, 'Hold full', '#e0685a', 1.2); break;
       case 'sold': if (wk) { popup(tw, wk.x, TOWN.ground - 44, `+${ev.value} g`, '#8fd47f', 1.8, true); burst(tw, wk.x, TOWN.ground - 30, 16, ['#f2c14e', '#ffe27a'], 50, 120); } break;
       case 'buy': if (wk) popup(tw, wk.x, TOWN.ground - 44, ev.label, '#f2c14e', 1.6); break;
@@ -214,23 +241,97 @@ export function createRenderer(canvas) {
     }
   }
 
+  /* ------------------------------------------------------ catch card --- */
+  /** Slides in at the top of the pane: the illustration, name, weight, price. */
+  function drawCard(pane, seat, slot) {
+    const c = cards[seat]; if (!c) return;
+    const f = c.fish, s = pane.w >= 480 ? 2 : 1, aw = 64 * s, ah = 32 * s;
+    const w = aw + 12 + (s === 2 ? 118 : 96), h = ah + 12;
+    const gone = c.max - c.t, k = Math.min(1, gone * 3.5), out = c.t < 0.4 ? c.t / 0.4 : 1;
+    const x = pane.x + 8 + slot * (w + 8), y = R(20 - (1 - k) * (h + 24));
+    ctx.globalAlpha = out;
+    px(x + 3, y + 3, w, h, 'rgba(4,6,10,0.55)');
+    px(x, y, w, h, '#0d1018'); px(x, y, w, 1, f.tier >= 3 ? '#f2c14e' : '#3a4252'); px(x, y + h - 1, w, 1, '#3a4252'); px(x, y, 1, h, '#3a4252'); px(x + w - 1, y, 1, h, '#3a4252');
+    px(x + 5, y + 5, aw + 2, ah + 2, '#162030'); px(x + 6, y + 6, aw, ah, '#1e3040');
+    drawFishArt(ctx, f.id, x + 6, y + 6, s);
+    const tx = x + aw + 14, ty = y + 8;
+    text(ctx, f.name, tx, ty, { color: f.tier >= 3 ? '#f2c14e' : '#ffffff' });
+    text(ctx, `${f.weight} kg`, tx, ty + 11, { color: '#e8e2d2' });
+    text(ctx, `${f.price} g`, tx, ty + 21, { color: '#f2c14e' });
+    if (c.isNew) text(ctx, s === 2 ? 'NEW SPECIES' : 'NEW', tx, ty + (s === 2 ? 33 : 31), { color: '#8fd47f' });
+    else if (s === 2) text(ctx, '*'.repeat(f.tier), tx, ty + 33, { color: '#98a4b2' });
+    ctx.globalAlpha = 1;
+  }
+
+  /* --------------------------------------------------------- journal --- */
+  function drawJournal(pane, state) {
+    const p = pane.player, j = p.journal; if (!j) return;
+    const page = journalPage(j.idx, p.stats.log), tot = journalTotals(p.stats.log);
+    const wide = pane.w >= 480, s = wide ? 2 : 1;
+    const m = 10, x = pane.x + m, y = pane.y + 18, w = pane.w - m * 2, h = wide ? 204 : 262;
+    px(x + 3, y + 3, w, h, 'rgba(4,6,10,0.5)'); px(x, y, w, h, '#0b0e15'); px(x, y, w, 1, '#e8b04a'); px(x, y + h - 1, w, 1, '#3a4252'); px(x, y, 1, h, '#3a4252'); px(x + w - 1, y, 1, h, '#3a4252');
+    text(ctx, 'FISH JOURNAL', x + 10, y + 6, { color: '#f2c14e' });
+    text(ctx, p.name, x + w - 10, y + 6, { color: p.color, align: 'right' });
+    px(x + 8, y + 16, w - 16, 1, '#2a3040');
+    // left: the illustration in a frame, name, stars, the player's numbers
+    const aw = 64 * s, ah = 32 * s, ax = x + 14, ay = y + 24;
+    px(ax - 2, ay - 2, aw + 4, ah + 4, '#3a4252'); px(ax - 1, ay - 1, aw + 2, ah + 2, '#162030'); px(ax, ay, aw, ah, page.caught ? '#1e3040' : '#141c26');
+    drawFishArt(ctx, page.spec.id, ax, ay, s, { silhouette: !page.caught });
+    let ly = ay + ah + 8;
+    const lx = ax;
+    text(ctx, page.caught ? page.spec.name : '???', lx, ly, { color: page.caught ? (page.spec.tier >= 3 ? '#f2c14e' : '#ffffff') : '#7f8b98' }); ly += 10;
+    text(ctx, '*'.repeat(page.spec.tier) + (page.caught ? '' : `  ${page.info.price}`), lx, ly, { color: '#98a4b2' }); ly += 12;
+    if (page.caught) {
+      const e = page.entry;
+      text(ctx, `Caught ${e.n}   best ${e.best} kg`, lx, ly, { color: '#e8e2d2' }); ly += 10;
+      text(ctx, `Worth ${e.worth} g so far`, lx, ly, { color: '#8fd47f' }); ly += 10;
+      text(ctx, 'First:', lx, ly, { color: '#98a4b2' }); ly += 9;
+      for (const line of wrap(page.first, wide ? 30 : 26)) { text(ctx, line, lx, ly, { color: '#c9c3b4' }); ly += 9; }
+      if (page.spec.id === 'boot') { text(ctx, 'It is a boot.', lx, ly, { color: '#7f8b98' }); ly += 9; }
+    } else {
+      text(ctx, 'Not caught yet', lx, ly, { color: '#7f8b98' }); ly += 10;
+      for (const line of wrap(page.hint, wide ? 30 : 26)) { text(ctx, line, lx, ly, { color: '#c9c3b4' }); ly += 9; }
+    }
+    // right: where and when
+    const rx = wide ? x + w / 2 + 6 : x + 14, ry0 = wide ? y + 24 : ly + 6, col = 'right';
+    let ry = ry0;
+    const row = (label, val, colr = '#e8e2d2') => { text(ctx, label, rx, ry, { color: '#7f8b98' }); for (const line of wrap(val, wide ? 30 : 34)) { text(ctx, line, rx + 44, ry, { color: colr }); ry += 9; } ry += 2; };
+    const info = page.info;
+    row('WHERE', list(info.zones));
+    row('WHEN', list(info.seasons)); ry -= 2; row('', info.time, '#c9c3b4');
+    row('WEATHER', list(info.weather), info.weather[0] === 'Any weather' ? '#98a4b2' : '#8ab4c8');
+    if (page.caught || wide) { row('SIZE', info.weight, '#c9c3b4'); row('PRICE', info.price, '#f2c14e'); row('FIGHT', info.style, '#c9c3b4'); }
+    // footer: paging and totals
+    const fy = y + h - 12;
+    px(x + 8, fy - 5, w - 16, 1, '#2a3040');
+    text(ctx, `< ${page.idx + 1} / ${page.n} >`, x + 12, fy, { color: '#f2c14e' });
+    const best = state.empire.best;
+    text(ctx, wide ? `${tot.species} of ${tot.total} species   ${tot.count} fish   ${p.stats.earned} g earned${best ? `   biggest: ${best.name} ${best.weight} kg (${best.by})` : ''}` : `${tot.species}/${tot.total} species  ${tot.count} fish`, x + w - 12, fy, { color: '#98a4b2', align: 'right' });
+  }
+  function wrap(str, max) {
+    const words = String(str).split(' '), out = []; let line = '';
+    for (const wd of words) { if ((line + ' ' + wd).trim().length > max) { out.push(line.trim()); line = wd; } else line += ' ' + wd; }
+    if (line.trim()) out.push(line.trim());
+    return out;
+  }
+
   /* ------------------------------------------------------------- hud --- */
   function drawHud(state, panes, solo, wx) {
     const gear = gearStats(state.empire), t = state.time, season = seasonOf(t.day);
     const light = lightAt(t.minute);
     // Top bar
-    px(0, 0, W, 15, 'rgba(6,8,14,0.8)'); px(0, 15, W, 1, 'rgba(255,255,255,0.07)');
+    px(0, 0, CW, 15, 'rgba(6,8,14,0.8)'); px(0, 15, CW, 1, 'rgba(255,255,255,0.07)');
     ctx.drawImage(ICON.coin, 6, 5); ctx.drawImage(ICON.coinHi, 6, 5);
     text(ctx, `${state.empire.gold} g`, 15, 4, { color: '#f2c14e' });
     text(ctx, `${gear.baitName}${state.empire.baitCount > 0 ? ` x${state.empire.baitCount}` : ''}`, 66, 4, { color: '#98a4b2' });
-    if (solo) text(ctx, 'WASD move  Space act  E pull  Esc back', W / 2, 4, { color: '#7f8b98', align: 'center' });
+    if (solo && CW >= 460) text(ctx, 'WASD move  Space act  E pull  Esc back  J journal', CW / 2, 4, { color: '#7f8b98', align: 'center' });
     // weather, season, clock
     const wkind = state.weather?.kind || 'clear';
     const wlabel = wx.k > 0.5 || wkind === 'clear' ? weatherLabel(wkind) : 'Clearing';
     const icon = wkind === 'clear' ? (light > 0.5 ? ICON.sun : ICON.moon) : ICON[wkind === 'overcast' ? 'cloud' : wkind];
     const seasonTxt = `${SEASON_NAMES[season]}, day ${dayOfSeason(t.day)}`;
     const clockTxt = clockText(t.minute);
-    let x = W - 6;
+    let x = CW - 6;
     x -= text(ctx, clockTxt, x, 4, { align: 'right', color: '#e8e2d2' }) + 10;
     x -= text(ctx, seasonTxt, x, 4, { color: '#c9c3b4', align: 'right' }) + 10;
     x -= text(ctx, wlabel, x, 4, { color: '#98a4b2', align: 'right' }) + 3;
@@ -239,12 +340,12 @@ export function createRenderer(canvas) {
     for (const pane of panes) {
       const p = pane.player;
       if (!p) continue;
-      const fy = H - 15;
+      const fy = CH - 15;
       px(pane.x, fy, pane.w, 15, 'rgba(6,8,14,0.8)'); px(pane.x, fy, pane.w, 1, 'rgba(255,255,255,0.07)');
       text(ctx, p.name, pane.x + 6, fy + 4, { color: p.color });
       const holdCol = p.hold.length >= gear.cap ? '#e0685a' : '#98a4b2';
       text(ctx, `hold ${p.hold.length}/${gear.cap}`, pane.x + pane.w / 2, fy + 4, { color: holdCol, align: 'center' });
-      const prompt = p.loc === 'lake' && !p.fishing ? `${solo ? 'Space' : 'A'}: ${p.prompt}` : p.fishing?.stage === 'bite' ? 'HOOK!' : p.fishing?.stage === 'reel' ? (p.fishing.tug?.phase === 'open' ? 'PULL!' : 'hold to lift') : p.fishing?.stage === 'charging' ? 'release' : p.menu || p.door ? '' : p.loc !== 'lake' && p.near ? `${solo ? 'Space' : 'A'}: ${p.prompt}` : '';
+      const prompt = p.loc === 'lake' && !p.fishing ? `${solo ? 'Space' : 'A'}: ${p.prompt}` : p.fishing?.stage === 'bite' ? 'HOOK!' : p.fishing?.stage === 'reel' ? (p.fishing.tug?.phase === 'open' ? 'PULL!' : 'hold to lift') : p.fishing?.stage === 'charging' ? 'release' : p.journal ? `${solo ? 'Esc' : 'Back'}: close journal` : p.menu || p.door ? '' : p.loc !== 'lake' && p.near ? `${solo ? 'Space' : 'A'}: ${p.prompt}` : '';
       text(ctx, prompt, pane.x + pane.w - 6, fy + 4, { color: prompt.endsWith('!') ? '#f2c14e' : '#e8e2d2', align: 'right' });
     }
   }
@@ -260,9 +361,11 @@ export function createRenderer(canvas) {
     const wx = weatherMods(state); wx.wind = state.weather?.wind || 0;
     tickAmbient(season, night, wx, dt); tickFx(dt); wfx.tick(state, dt);
 
+    const activeNow = hidePlayers ? [] : players;
+    fit(activeNow.length && activeNow.every(p => p.loc === 'room') ? 'room' : 'out');
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = '#07080c'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#07080c'; ctx.fillRect(0, 0, CW, CH);
     if (shake > 0) ctx.translate(R((Math.random() - 0.5) * shake * 2), R((Math.random() - 0.5) * shake * 2));
 
     const active = hidePlayers ? [] : players;
@@ -272,32 +375,31 @@ export function createRenderer(canvas) {
     if (allLake && active.length > 1) {
       const xs = active.map(p => p.boat.x), ys = active.map(p => p.boat.y);
       const spanX = Math.max(...xs) - Math.min(...xs), spanY = Math.max(...ys) - Math.min(...ys);
-      const vw = W / ZOOM, vh = H / ZOOM;
+      const vw = CW, vh = CH;
       if (!lakeSplit && (spanX > vw - 70 || spanY > vh - 70)) lakeSplit = true;
       if (lakeSplit && spanX < vw - 150 && spanY < vh - 120) lakeSplit = false;
     } else lakeSplit = false;
     const panes = [];
-    const lakeCam = (cx, cy, vw, vh) => ({ x: clamp(R(cx - vw / 2), 0, W - vw), y: clamp(R(cy - vh / 2), 0, H - vh) });
+    // A world smaller than the view (a very small window) is centred rather than clamped.
+    const lakeCam = (cx, cy, vw, vh) => ({ x: vw >= W ? -R((vw - W) / 2) : clamp(R(cx - vw / 2), 0, W - vw), y: vh >= H ? -R((vh - H) / 2) : clamp(R(cy - vh / 2), 0, H - vh) });
     if (active.length === 0) {
-      const vw = W / ZOOM, vh = H / ZOOM;
-      panes.push({ x: 0, y: 0, w: W, h: H, vw, vh, zoom: ZOOM, world: 'lake', player: null, cam: lakeCam(W / 2, H / 2 + 6, vw, vh), shared: true });
+      panes.push({ x: 0, y: 0, w: CW, h: CH, vw: CW, vh: CH, zoom: 1, world: 'lake', player: null, cam: lakeCam(W / 2, H / 2 + 6, CW, CH), shared: true });
     } else if (allLake && !lakeSplit) {
-      const vw = W / ZOOM, vh = H / ZOOM;
       const cx = active.reduce((s, p) => s + p.boat.x, 0) / active.length, cy = active.reduce((s, p) => s + p.boat.y, 0) / active.length;
-      panes.push({ x: 0, y: 0, w: W, h: H, vw, vh, zoom: ZOOM, world: 'lake', player: active[0], cam: lakeCam(cx, cy, vw, vh), shared: true });
+      panes.push({ x: 0, y: 0, w: CW, h: CH, vw: CW, vh: CH, zoom: 1, world: 'lake', player: active[0], cam: lakeCam(cx, cy, CW, CH), shared: true });
     } else active.forEach((p, i) => {
-      const pw = Math.floor(W / active.length), x = i * pw, zoom = p.loc === 'room' ? ROOM_ZOOM : ZOOM, vw = pw / zoom, vh = H / zoom;
+      const pw = Math.floor(CW / active.length), x = i * pw, vw = pw, vh = CH;
       let cam;
       if (p.loc === 'lake') cam = lakeCam(p.boat.x, p.boat.y, vw, vh);
       else if (p.loc === 'room') { const rm = ROOMS[p.room]; cam = { x: clamp(R(p.walk.x - vw / 2), 0, Math.max(0, rm.w - vw)), y: H - vh }; }
       else cam = { x: clamp(R(p.walk.x - vw / 2), 0, TOWN.w - vw), y: H - vh };
-      panes.push({ x, y: 0, w: pw, h: H, vw, vh, zoom, world: p.loc, player: p, cam });
+      panes.push({ x, y: 0, w: pw, h: CH, vw, vh, zoom: 1, world: p.loc, player: p, cam });
     });
 
     for (const pane of panes) {
       ctx.save();
       ctx.beginPath(); ctx.rect(pane.x, pane.y, pane.w, pane.h); ctx.clip();
-      ctx.translate(pane.x, pane.y); ctx.scale(pane.zoom, pane.zoom); ctx.translate(-pane.cam.x, -pane.cam.y);
+      ctx.translate(pane.x - pane.cam.x, pane.y - pane.cam.y);
       const G = { ctx, clock, reduceMotion, light: lightLvl, wx, season, wfx };
       const wr = { x: pane.cam.x, y: pane.cam.y, w: pane.vw, h: pane.vh };
       let world = 'lake';
@@ -327,10 +429,12 @@ export function createRenderer(canvas) {
       // Text and menus sit on top of the pane in screen pixels
       drawPopups(world, pane);
       if (pane.player?.menu && pane.world !== 'lake') drawMenu(G, state, pane.player, { x: pane.x, y: pane.y }, pane.w, pane.h);
-      if (panes.length > 1 && pane.x > 0) px(pane.x - 1, 0, 2, H, '#07080c');
+      if (pane.shared) active.forEach((q, i) => drawCard(pane, q.seat, i)); else if (pane.player) drawCard(pane, pane.player.seat, 0);
+      if (pane.shared) active.forEach(q => { if (q.journal) drawJournal({ ...pane, player: q }, state); }); else if (pane.player?.journal) drawJournal(pane, state);
+      if (panes.length > 1 && pane.x > 0) px(pane.x - 1, 0, 2, CH, '#07080c');
     }
     const hudPanes = panes.length === 1 && active.length > 1
-      ? active.map((p, i) => ({ x: i * (W / active.length), w: W / active.length, player: p }))
+      ? active.map((p, i) => ({ x: R(i * (CW / active.length)), w: R(CW / active.length), player: p }))
       : panes;
     if (!hidePlayers) drawHud(state, hudPanes, solo, wx);
     ctx.setTransform(1, 0, 0, 1, 0, 0);

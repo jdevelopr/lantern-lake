@@ -8,6 +8,7 @@ import { GEAR, FISH, FISH_BY_ID } from '../shared/catalog.js';
 import { SEASON_NAMES } from '../shared/protocol.js';
 import { mkCanvas, R, hash, mix, scale, disc, ellipse, ditherPattern, ditherRect, text, textWidth, sprite, clamp, lerp } from './gfx.js';
 import { skyColors, drawWalker } from './town.js';
+import { drawFigure, drawSeated, drawKid, drawSleeper, drawCat, drawDog, drawGull } from './figure.js';
 
 const G0 = TOWN.ground, H = 360;
 const bakes = new Map();   // room id -> { season, canvas, live }
@@ -167,26 +168,26 @@ function cageLamp(g, L, x, ceil, drop = 22, on = 'always') {
 function candle(g, L, x, y, on = 'dim') { rect(g, x - 2, y - 1, 5, 1, '#8a8a80'); rect(g, x, y - 6, 1, 5, '#f0e8d0'); L.lamps.push({ x: x + 0.5, y: y - 8, r: 24, color: '#ffc46a', kind: 'candle', on, w: 1 }); }
 function stove(g, L, x, y, kind, ceil) {
   if (kind === 'potbelly') {
-    rect(g, x - 2, y - 2, 20, 2, '#1a1a1c'); rect(g, x - 1, y - 24, 18, 22, '#23262e'); rect(g, x, y - 23, 3, 20, '#3a3d46'); rect(g, x + 1, y - 27, 14, 3, '#2d3038');
-    rect(g, x + 6, ceil, 4, y - 27 - ceil, '#23262e'); rect(g, x + 6, ceil, 1, y - 27 - ceil, '#3a3d46'); rect(g, x + 4, y - 30, 8, 3, '#3a3d46');
-    rect(g, x + 4, y - 18, 8, 7, '#0a0806'); L.fires.push({ x: x + 8, y: y - 14, w: 6, h: 6, r: 44 });
-    rect(g, x + 2, y - 7, 12, 1, '#3a3d46'); rect(g, x + 4, y - 20, 8, 1, '#4a4d56');
-    rect(g, x + 14, y - 34, 9, 6, '#8a8a80'); rect(g, x + 15, y - 36, 7, 2, '#9a9a90'); rect(g, x + 18, y - 37, 2, 1, '#6a6a60'); rect(g, x + 23, y - 33, 2, 2, '#8a8a80'); rect(g, x + 12, y - 33, 2, 3, '#8a8a80');
-    rect(g, x + 13, y - 28, 12, 2, '#3a3d46'); L.steam.push({ x: x + 24, y: y - 35 });
+    rect(g, x - 3, y - 3, 24, 3, '#1a1a1c'); rect(g, x - 1, y - 32, 20, 29, '#23262e'); rect(g, x, y - 31, 4, 27, '#3a3d46'); rect(g, x + 1, y - 36, 16, 4, '#2d3038');
+    rect(g, x + 7, ceil, 5, y - 36 - ceil, '#23262e'); rect(g, x + 7, ceil, 1, y - 36 - ceil, '#3a3d46'); rect(g, x + 5, y - 39, 9, 3, '#3a3d46');
+    rect(g, x + 4, y - 24, 10, 9, '#0a0806'); L.fires.push({ x: x + 9, y: y - 19, w: 8, h: 8, r: 50 });
+    rect(g, x + 2, y - 9, 14, 1, '#3a3d46'); rect(g, x + 4, y - 26, 10, 1, '#4a4d56'); rect(g, x + 5, y - 13, 8, 2, '#3a3d46');
+    rect(g, x + 16, y - 44, 11, 8, '#8a8a80'); rect(g, x + 17, y - 46, 9, 2, '#9a9a90'); rect(g, x + 20, y - 48, 3, 2, '#6a6a60'); rect(g, x + 27, y - 43, 3, 3, '#8a8a80'); rect(g, x + 14, y - 42, 2, 4, '#8a8a80');
+    rect(g, x + 15, y - 36, 14, 2, '#3a3d46'); L.steam.push({ x: x + 28, y: y - 45 });
   } else {
-    rect(g, x, y - 16, 34, 16, '#2a2c34'); rect(g, x + 1, y - 15, 32, 2, '#3d4048'); rect(g, x + 3, y - 12, 11, 8, '#0a0806'); L.fires.push({ x: x + 8, y: y - 9, w: 8, h: 6, r: 40 });
-    rect(g, x + 18, y - 12, 13, 8, '#1a1c22'); rect(g, x + 20, y - 10, 9, 4, '#22242c'); rect(g, x + 19, y - 7, 11, 1, '#3d4048');
-    rect(g, x - 2, y - 18, 38, 2, '#3d4048'); rect(g, x + 26, y - 21, 4, 3, '#4a4d56'); rect(g, x + 27, ceil, 3, y - 21 - ceil, '#2a2c34');
-    rect(g, x + 5, y - 25, 12, 7, '#7a4a3a'); rect(g, x + 4, y - 26, 14, 2, '#8a5a4a'); rect(g, x + 17, y - 23, 3, 2, '#7a4a3a'); L.steam.push({ x: x + 10, y: y - 27 });
+    rect(g, x, y - 26, 40, 26, '#2a2c34'); rect(g, x + 1, y - 25, 38, 3, '#3d4048'); rect(g, x + 4, y - 20, 13, 12, '#0a0806'); L.fires.push({ x: x + 10, y: y - 15, w: 10, h: 9, r: 46 });
+    rect(g, x + 21, y - 20, 16, 12, '#1a1c22'); rect(g, x + 23, y - 17, 12, 6, '#22242c'); rect(g, x + 22, y - 12, 14, 1, '#3d4048'); rect(g, x + 4, y - 6, 32, 1, '#3d4048');
+    rect(g, x - 2, y - 28, 44, 2, '#3d4048'); rect(g, x + 30, y - 31, 5, 3, '#4a4d56'); rect(g, x + 31, ceil, 3, y - 31 - ceil, '#2a2c34');
+    rect(g, x + 6, y - 37, 14, 9, '#7a4a3a'); rect(g, x + 5, y - 38, 16, 2, '#8a5a4a'); rect(g, x + 20, y - 35, 3, 2, '#7a4a3a'); L.steam.push({ x: x + 12, y: y - 39 });
   }
 }
 function fireplace(g, L, x, y, w = 56) {
-  rect(g, x - 6, y - 36, w + 12, 5, '#6a5a4a'); hline(g, x - 6, y - 36, w + 12, '#8a7a6a');
-  for (let yy = y - 31; yy < y; yy += 5) { const off = ((yy - y) / 5 | 0) % 2 ? 5 : 0; for (let xx = x - 6 + off; xx < x + w + 6; xx += 10) rect(g, xx, yy, 9, 4, hash(xx, yy) < 0.5 ? '#6e6258' : '#5e5248'); hline(g, x - 6, yy + 4, w + 12, '#3d3630'); }
-  rect(g, x + 6, y - 26, w - 12, 26, '#0a0806'); rect(g, x + 8, y - 24, w - 16, 24, '#120e0a');
-  rect(g, x + 12, y - 6, w - 24, 3, '#3a2a1c'); rect(g, x + 16, y - 9, w - 32, 3, '#4a3624'); rect(g, x + 14, y - 3, w - 28, 2, '#2d3038');
-  L.fires.push({ x: x + w / 2, y: y - 12, w: w - 30, h: 12, r: 90, big: true });
-  rect(g, x, y, w, 2, '#5a5754');
+  rect(g, x - 8, y - 50, w + 16, 6, '#6a5a4a'); hline(g, x - 8, y - 50, w + 16, '#8a7a6a');
+  for (let yy = y - 44; yy < y; yy += 5) { const off = ((yy - y) / 5 | 0) % 2 ? 5 : 0; for (let xx = x - 8 + off; xx < x + w + 8; xx += 10) rect(g, xx, yy, 9, 4, hash(xx, yy) < 0.5 ? '#6e6258' : '#5e5248'); hline(g, x - 8, yy + 4, w + 16, '#3d3630'); }
+  rect(g, x + 6, y - 36, w - 12, 36, '#0a0806'); rect(g, x + 8, y - 34, w - 16, 34, '#120e0a');
+  rect(g, x + 12, y - 7, w - 24, 4, '#3a2a1c'); rect(g, x + 16, y - 11, w - 32, 4, '#4a3624'); rect(g, x + 14, y - 3, w - 28, 2, '#2d3038');
+  L.fires.push({ x: x + w / 2, y: y - 17, w: w - 30, h: 16, r: 100, big: true });
+  rect(g, x - 2, y, w + 4, 2, '#5a5754');
 }
 function shelf(g, x, y, w, col = '#6a4a30') { rect(g, x, y, w, 3, col); hline(g, x, y, w, scale(col, 1.3)); rect(g, x + 2, y + 3, 2, 3, scale(col, 0.7)); rect(g, x + w - 4, y + 3, 2, 3, scale(col, 0.7)); }
 function jar(g, x, y, h, col, lid = '#b8a070') { rect(g, x, y - h, 6, h, col); rect(g, x + 1, y - h, 1, h, mix(col, '#ffffff', 0.4)); rect(g, x, y - h - 1, 6, 2, lid); }
@@ -200,63 +201,47 @@ function picture(g, x, y, w, h, kind, frame = '#8a6a44') {
   else if (kind === 'crayon') { rect(g, x, y, w, h, '#f0ead8'); rect(g, x + 2, y + 2, 4, 4, '#f2c14e'); rect(g, x + 4, y + h - 5, 6, 3, '#ff8c66'); rect(g, x + 10, y + h - 4, 2, 1, '#ff8c66'); rect(g, x + w - 6, y + 4, 3, 3, '#7fe0c3'); rect(g, x + 2, y + h - 2, w - 4, 1, '#5e8a4a'); }
   else if (kind === 'map') { rect(g, x, y, w, h, '#d8c8a0'); rect(g, x + 3, y + 3, w * 0.4, h * 0.5, '#a8b890'); rect(g, x + w * 0.55, y + 5, w * 0.35, h * 0.6, '#a8b890'); rect(g, x + 2, y + h - 4, w - 4, 1, '#8a7a5a'); }
 }
-function table(g, x, y, w, col = '#7a5a3a', h = 9) {
+function table(g, x, y, w, col = '#7a5a3a', h = 14) {
   rect(g, x, y - h, w, 3, col); hline(g, x, y - h, w, scale(col, 1.3)); rect(g, x + 2, y - h + 3, 2, h - 3, scale(col, 0.8)); rect(g, x + w - 4, y - h + 3, 2, h - 3, scale(col, 0.8));
 }
 function bed(g, x, y, w, quilt = ['#8a3a3a', '#d8c48a'], pillow = '#e8e2d2') {
-  rect(g, x - 2, y - 18, 3, 18, '#4a3324'); rect(g, x + w - 1, y - 12, 3, 12, '#4a3324'); rect(g, x - 2, y - 18, w + 4, 2, '#5c4030'); rect(g, x - 1, y - 16, w + 2, 6, '#5c4030');
-  rect(g, x, y - 8, w, 6, '#5a4a3a'); rect(g, x + 1, y - 10, w - 2, 3, '#c9c3b4');
-  for (let yy = y - 9; yy < y - 3; yy += 3) for (let xx = x + 10; xx < x + w - 1; xx += 4) rect(g, xx, yy, 3, 2, ((xx + yy) / 4 | 0) % 2 ? quilt[0] : quilt[1]);
-  rect(g, x + 2, y - 12, 10, 3, pillow); rect(g, x + 2, y - 12, 10, 1, mix(pillow, '#ffffff', 0.5));
+  rect(g, x - 3, y - 26, 4, 26, '#4a3324'); rect(g, x + w - 1, y - 18, 4, 18, '#4a3324'); rect(g, x - 3, y - 26, w + 6, 3, '#5c4030'); rect(g, x - 2, y - 23, w + 4, 9, '#5c4030'); rect(g, x, y - 21, w, 5, '#6e4e38');
+  rect(g, x, y - 10, w, 8, '#5a4a3a'); rect(g, x + 1, y - 12, w - 2, 3, '#c9c3b4');
+  for (let yy = y - 11; yy < y - 3; yy += 3) for (let xx = x + 13; xx < x + w - 1; xx += 4) rect(g, xx, yy, 3, 2, ((xx + yy) / 4 | 0) % 2 ? quilt[0] : quilt[1]);
+  rect(g, x + 2, y - 15, 12, 4, pillow); rect(g, x + 2, y - 15, 12, 1, mix(pillow, '#ffffff', 0.5));
   rect(g, x, y - 2, w, 2, '#3a2a1c');
 }
 function armchair(g, x, y, col = '#6a4a4a') {
-  rect(g, x, y - 20, 6, 20, col); rect(g, x + 1, y - 18, 3, 16, scale(col, 1.15));
-  rect(g, x + 6, y - 9, 14, 9, col); rect(g, x + 20, y - 12, 5, 12, col);
-  rect(g, x + 7, y - 8, 12, 2, scale(col, 1.2)); rect(g, x, y, 25, 1, scale(col, 0.6));
+  rect(g, x, y - 30, 8, 30, col); rect(g, x + 1, y - 28, 4, 24, scale(col, 1.15));
+  rect(g, x + 8, y - 12, 18, 12, col); rect(g, x + 26, y - 17, 6, 17, col);
+  rect(g, x + 9, y - 11, 16, 3, scale(col, 1.2)); rect(g, x, y, 32, 1, scale(col, 0.6)); rect(g, x + 26, y - 17, 6, 2, scale(col, 1.15));
 }
 function sofa(g, x, y, w, col = '#3d6b5a', cushion = '#c46a5a') {
-  rect(g, x, y - 16, w, 8, col); rect(g, x + 2, y - 15, w - 4, 6, scale(col, 1.15));
-  rect(g, x, y - 8, w, 8, col); rect(g, x, y - 18, 7, 18, col); rect(g, x + w - 7, y - 18, 7, 18, col);
-  rect(g, x + 9, y - 8, (w - 20) / 2, 2, cushion); rect(g, x + w / 2 + 1, y - 8, (w - 20) / 2, 2, cushion); rect(g, x, y, w, 1, scale(col, 0.6));
+  rect(g, x, y - 24, w, 12, col); rect(g, x + 3, y - 22, w - 6, 9, scale(col, 1.15));
+  rect(g, x, y - 12, w, 12, col); rect(g, x, y - 27, 8, 27, col); rect(g, x + w - 8, y - 27, 8, 27, col);
+  rect(g, x + 10, y - 12, (w - 22) / 2, 3, cushion); rect(g, x + w / 2 + 1, y - 12, (w - 22) / 2, 3, cushion); rect(g, x, y, w, 1, scale(col, 0.6));
 }
-function crate(g, x, y, s = 10, col = '#6a5438') { rect(g, x, y - s, s, s, col); outline(g, x, y - s, s, s, scale(col, 0.7)); hline(g, x + 1, y - s + 1, s - 2, scale(col, 1.2)); rect(g, x + 1, y - (s >> 1), s - 2, 1, scale(col, 0.7)); }
-function barrel(g, x, y, w = 10, h = 14, col = '#4a3324') { rect(g, x, y - h, w, h, col); rect(g, x + 1, y - h, 2, h, scale(col, 1.25)); rect(g, x, y - h + 2, w, 1, '#2d3038'); rect(g, x, y - 3, w, 1, '#2d3038'); rect(g, x, y - (h >> 1), w, 1, '#2d3038'); }
+function crate(g, x, y, s = 14, col = '#6a5438') { rect(g, x, y - s, s, s, col); outline(g, x, y - s, s, s, scale(col, 0.7)); hline(g, x + 1, y - s + 1, s - 2, scale(col, 1.2)); rect(g, x + 1, y - (s >> 1), s - 2, 1, scale(col, 0.7)); }
+function barrel(g, x, y, w = 12, h = 20, col = '#4a3324') { rect(g, x, y - h, w, h, col); rect(g, x + 1, y - h, 2, h, scale(col, 1.25)); rect(g, x, y - h + 2, w, 1, '#2d3038'); rect(g, x, y - 3, w, 1, '#2d3038'); rect(g, x, y - (h >> 1), w, 1, '#2d3038'); }
 function bucket(g, x, y, col = '#8a8a80') { rect(g, x, y - 8, 8, 8, col); rect(g, x + 1, y - 8, 1, 8, scale(col, 1.3)); rect(g, x - 1, y - 9, 10, 1, scale(col, 0.7)); rect(g, x + 3, y - 12, 2, 1, scale(col, 0.7)); rect(g, x + 2, y - 11, 1, 2, scale(col, 0.7)); rect(g, x + 5, y - 11, 1, 2, scale(col, 0.7)); }
-function boots(g, x, y, col = '#2d3038') { rect(g, x, y - 8, 4, 8, col); rect(g, x + 4, y - 3, 3, 3, col); rect(g, x + 6, y - 8, 4, 8, col); rect(g, x + 10, y - 3, 3, 3, col); rect(g, x + 1, y - 8, 1, 6, scale(col, 1.4)); rect(g, x + 7, y - 8, 1, 6, scale(col, 1.4)); }
+function boots(g, x, y, col = '#2d3038') { rect(g, x, y - 13, 5, 13, col); rect(g, x + 5, y - 4, 4, 4, col); rect(g, x + 8, y - 13, 5, 13, col); rect(g, x + 13, y - 4, 4, 4, col); rect(g, x + 1, y - 13, 1, 10, scale(col, 1.4)); rect(g, x + 9, y - 13, 1, 10, scale(col, 1.4)); rect(g, x, y - 14, 5, 1, scale(col, 1.3)); rect(g, x + 8, y - 14, 5, 1, scale(col, 1.3)); }
 function ropeCoil(g, x, y, col = '#c9b28a') { for (let i = 0; i < 4; i++) outline(g, x - 4 - i, y - 4 - i, 9 + i * 2, 9 + i * 2, i % 2 ? col : scale(col, 0.75)); rect(g, x, y - 9, 1, 3, '#3a3a3c'); }
 function net(g, x, y, w, h, col = '#c9b28a') { for (let yy = y; yy < y + h; yy += 4) for (let xx = x; xx < x + w; xx += 4) rect(g, xx + ((yy - y) / 4 % 2 ? 2 : 0), yy, 1, 1, col); for (let i = 0; i < 3; i++) rect(g, x + 4 + i * (w / 3 | 0), y + h, 3, 3, i % 2 ? '#e0685a' : '#e8e2d2'); }
-function plantPot(g, x, y, big = false) { rect(g, x - 4, y - 7, 9, 7, '#a05a3a'); rect(g, x - 5, y - 8, 11, 2, '#b8683f'); const h = big ? 14 : 8; rect(g, x, y - 8 - h, 1, h, '#3f6a30'); for (let i = 0; i < (big ? 4 : 2); i++) { const ly = y - 11 - i * 4, d = i % 2 ? 1 : -1; rect(g, x + d, ly, d * 4, 2, '#5a8a44'); rect(g, x + d * 4, ly - 1, 1, 1, '#4a7a3a'); } }
-function coatRack(g, x, y) { rect(g, x, y - 32, 2, 32, '#4a3324'); rect(g, x - 4, y - 1, 10, 1, '#4a3324'); rect(g, x - 5, y - 31, 12, 2, '#4a3324'); rect(g, x - 8, y - 29, 8, 16, '#3d6b5a'); rect(g, x - 9, y - 30, 10, 3, '#3d6b5a'); rect(g, x + 4, y - 31, 7, 3, '#5a4a34'); rect(g, x + 2, y - 28, 11, 1, '#5a4a34'); }
+function plantPot(g, x, y, big = false) { rect(g, x - 5, y - 10, 11, 10, '#a05a3a'); rect(g, x - 6, y - 11, 13, 2, '#b8683f'); const h = big ? 22 : 10; rect(g, x, y - 8 - h, 1, h, '#3f6a30'); for (let i = 0; i < (big ? 5 : 2); i++) { const ly = y - 14 - i * 4, d = i % 2 ? 1 : -1; rect(g, x + d, ly, d * 5, 2, '#5a8a44'); rect(g, x + d * 5, ly - 1, 1, 1, '#4a7a3a'); } }
+function coatRack(g, x, y) { rect(g, x, y - 48, 3, 48, '#4a3324'); rect(g, x - 5, y - 2, 13, 2, '#4a3324'); rect(g, x - 6, y - 47, 15, 3, '#4a3324'); rect(g, x - 10, y - 44, 10, 26, '#3d6b5a'); rect(g, x - 11, y - 45, 12, 4, '#3d6b5a'); rect(g, x - 8, y - 40, 2, 18, scale('#3d6b5a', 0.8)); rect(g, x + 5, y - 47, 9, 4, '#5a4a34'); rect(g, x + 2, y - 43, 14, 2, '#5a4a34'); }
 function clockFace(g, L, x, y, r = 8) { disc(g, x, y, r + 2, '#3a2a1c'); disc(g, x, y, r, '#e8e2d2'); for (let i = 0; i < 12; i += 3) { const a = i / 12 * Math.PI * 2; rect(g, x + Math.sin(a) * (r - 2) - 0.5, y - Math.cos(a) * (r - 2) - 0.5, 1, 1, '#1a1712'); } L.clocks.push({ x, y, r }); }
 function counter(f, x, w, top = '#c9b28a', front = '#5a4030') {
   // waist-high: the keeper stands behind it and shows from the belt up
-  rect(f, x, G0 - 8, w, 8, front); for (let xx = x; xx < x + w; xx += 24) vline(f, xx, G0 - 8, 8, scale(front, 1.25)); hline(f, x, G0 - 3, w, scale(front, 0.7));
-  rect(f, x - 3, G0 - 11, w + 6, 3, top); hline(f, x - 3, G0 - 11, w + 6, mix(top, '#ffffff', 0.35)); hline(f, x - 3, G0 - 9, w + 6, scale(top, 0.7));
+  rect(f, x, G0 - 14, w, 14, front); for (let xx = x; xx < x + w; xx += 24) vline(f, xx, G0 - 14, 14, scale(front, 1.25)); hline(f, x, G0 - 4, w, scale(front, 0.7)); hline(f, x, G0 - 9, w, scale(front, 0.8));
+  rect(f, x - 3, G0 - 17, w + 6, 3, top); hline(f, x - 3, G0 - 17, w + 6, mix(top, '#ffffff', 0.35)); hline(f, x - 3, G0 - 15, w + 6, scale(top, 0.7));
 }
 
 /* ------------------------------------------------------------ people --- */
-// 9 wide, 18 tall, drawn feet at the floor line. Two frames each: 'a' at rest, 'b' with
-// the working hand raised. Letters: h hair, s skin, e eyes, c coat, a apron, d trousers,
-// b boots, t hat.
-const NPC_A = ['...hhh...', '..hhhhh..', '.hhhhhhh.', '.hsssssh.', '..seses..', '..sssss..', '...sss...', '..ccccc..', '.ccccccc.', 'c.ccccc.c', 'c.aaaaa.c', 's.aaaaa.s', '..aaaaa..', '..aaaaa..', '..dd.dd..', '..dd.dd..', '..bb.bb..', '.bbb.bbb.'];
-const NPC_B = ['...hhh..s', '..hhhhh.c', '.hhhhhhhc', '.hsssssh.', '..seses.c', '..sssss.c', '...sss...', '..cccccc.', '.ccccccc.', 'c.ccccc..', 'c.aaaaa..', 's.aaaaa..', '..aaaaa..', '..aaaaa..', '..dd.dd..', '..dd.dd..', '..bb.bb..', '.bbb.bbb.'];
-const HAT_A = ['..ttttt..', '.ttttttt.', 'ttttttttt', '.hsssssh.', '..seses..', '..sssss..', '...sss...', '..ccccc..', '.ccccccc.', 'c.ccccc.c', 'c.ccccc.c', 's.ccccc.s', '..ccccc..', '..ccccc..', '..dd.dd..', '..dd.dd..', '..bb.bb..', '.bbb.bbb.'];
-const HAT_B = ['..ttttt.s', '.tttttttc', 'ttttttttc', '.hsssssh.', '..seses.c', '..sssss.c', '...sss...', '..cccccc.', '.ccccccc.', 'c.ccccc..', 'c.ccccc..', 's.ccccc..', '..ccccc..', '..ccccc..', '..dd.dd..', '..dd.dd..', '..bb.bb..', '.bbb.bbb.'];
-// Seated, side-on facing right: 12 wide, 16 tall, seat at the floor line - 12.
-const SIT_A = ['...hhh......', '..hhhhh.....', '..hsssse....', '..hsssss....', '...ssss.....', '....ss......', '..cccccc....', '.ccccccccs..', '.ccccccccs..', '.cccccccc...', '.ccdddddd...', '.ccdd..ddd..', '.ccdd...dd..', '.....ddd.dd.', '.......bb.bb', '............'];
-const SIT_B = ['...hhh......', '..hhhhh.....', '..hsssse....', '..hsssss....', '...ssss..s..', '....ss...c..', '..cccccc.c..', '.cccccccc...', '.ccccccccs..', '.cccccccc...', '.ccdddddd...', '.ccdd..ddd..', '.ccdd...dd..', '.....ddd.dd.', '.......bb.bb', '............'];
-const KID_A = ['..hhh..', '.hhhhh.', '.hsssh.', '..ses..', '..sss..', '.ccccc.', 'c.ccc.c', 's.ccc.s', '..ddd..', '..d.d..', '..b.b..'];
-const KID_B = ['..hhh.s', '.hhhhh.c', '.hsssh.', '..ses.c', '..sss.c', '.ccccc.', 'c.cccc.', 's.ccc..', '..ddd..', '..d.d..', '..b.b..'];
-const CAT = [['.....', 'h...h', 'hhhhh', 'hehe.', 'hhhhh', 'hhhhhhhh', 'hhhhhhhhh', '.h.h..h.h'], ['.....', 'h...h', 'hhhhh', 'hhhh.', 'hhhhh', 'hhhhhhhh', 'hhhhhhhhh', '.h.h..h.h']];
-const CAT_CURL = [['.....', '..hhhhh..', '.hhhhhhh.', 'hhhhhhhhh', 'hhh.hhhhh', 'hhhhhhhhh', '.hhhhhhh.'], ['.....', '..hhhhh..', '.hhhhhhh.', 'hhhhhhhhh', 'hhh.hhhhh', 'hhhhhhhhh', '.hhhhhhhh']];
-const DOG = [['.....', '...hhhh...hh', '..hhhhhhhhhh', 'hhhhhhhhhhh.', 'hehhhhhhhhh.', 'hhhhhhhhhhh.', '.hh.hh..hh..'], ['.....', '...hhhh...h.', '..hhhhhhhhh.', 'hhhhhhhhhhh.', 'hehhhhhhhhh.', 'hhhhhhhhhhh.', '.hh.hh..hh..']];
-const GULL = [['...ww..', '..wwwwo', '.wwwww.', 'wwwww..', '.ww....', '..y.y..'], ['...ww..', '..wwwwo', '.wwwww.', 'wwwww..', '.ww....', '..y.y..']];
-
-function person(ctx, rows, pal, x, y, flip = false) { const s = sprite(rows, pal, flip); ctx.drawImage(s, R(x - (s.width >> 1)), R(y - s.height)); return s; }
-function shadow(ctx, x, y, r = 6) { ellipse(ctx, x, y, r, 1, 'rgba(6,8,14,0.45)'); }
+function shadow(ctx, x, y, r = 8) { ellipse(ctx, x, y, r, 2, 'rgba(6,8,14,0.4)'); }
 function bubbleZ(ctx, x, y, clock) { for (let k = 0; k < 2; k++) { const t = (clock * 0.45 + k * 0.5) % 1; ctx.globalAlpha = 1 - t; text(ctx, 'z', x + 4 + t * 8 + k * 3, y - 6 - t * 18, { color: '#cfd8ea', shadow: false }); } ctx.globalAlpha = 1; }
 function smokePuff(ctx, x, y, clock, n = 3, col = 'rgba(200,200,210,') { for (let k = 0; k < n; k++) { const t = (clock * 0.35 + k / n) % 1; ctx.fillStyle = `${col}${0.4 * (1 - t)})`; ctx.fillRect(R(x + Math.sin((t + k) * 6) * 3 + t * 5), R(y - t * 26), 2, 2); } }
+/** Keepers turn to face whoever is nearest. */
+const facing = (kx, p, others) => { let best = p, bd = Math.abs(p.walk.x - kx); for (const o of others || []) { const d = Math.abs(o.walk.x - kx); if (d < bd) { bd = d; best = o; } } return best.walk.x < kx ? -1 : 1; };
 
 /* ------------------------------------------------------------- bakes --- */
 // Each bake paints two layers: `g` (behind the keeper) and `f` (counters and props the
@@ -289,19 +274,19 @@ function bakeFishmonger(g, f, L, season) {
   clockFace(g, L, 474, 222, 8);
   picture(g, 462, 244, 30, 18, 'lake', '#5a4030');
   // ice crate, salt barrels, crates (the cat sleeps up there), boots, bucket and mop
-  crate(g, 150, G0, 18, '#8a8a80'); rect(g, 150, G0 - 22, 18, 4, '#e6ebef'); rect(g, 152, G0 - 23, 14, 1, '#f4f8fa'); text(g, 'ICE', 159, G0 - 16, { color: '#2d3038', align: 'center', shadow: false });
-  barrel(g, 440, G0, 10, 14); barrel(g, 452, G0, 10, 12);
-  crate(g, 470, G0, 12); crate(g, 484, G0, 12); crate(g, 477, G0 - 12, 10, '#7a6448');
-  boots(g, 56, G0, '#3d5468'); bucket(g, 70, G0); rect(g, 80, G0 - 26, 1, 26, '#8a6a44'); rect(g, 77, G0 - 3, 7, 3, '#c9c3b4');
+  crate(g, 148, G0, 22, '#8a8a80'); rect(g, 148, G0 - 26, 22, 4, '#e6ebef'); rect(g, 150, G0 - 27, 18, 1, '#f4f8fa'); text(g, 'ICE', 159, G0 - 18, { color: '#2d3038', align: 'center', shadow: false });
+  barrel(g, 438, G0, 12, 20); barrel(g, 452, G0, 12, 17);
+  crate(g, 470, G0, 14); crate(g, 486, G0, 14); crate(g, 478, G0 - 14, 12, '#7a6448');
+  boots(g, 56, G0, '#3d5468'); bucket(g, 76, G0); rect(g, 88, G0 - 36, 2, 36, '#8a6a44'); rect(g, 85, G0 - 4, 8, 4, '#c9c3b4');
   rect(g, 190, 226, 14, 20, '#e8e2d2'); rect(g, 192, 228, 10, 16, '#d8d0bc'); rect(g, 194, 232, 2, 9, '#3d5468'); rect(g, 198, 232, 2, 9, '#3d5468'); rect(g, 193, 241, 4, 2, '#3d5468'); rect(g, 197, 241, 4, 2, '#3d5468');
   // front: marble counter with the ice, scales, register and the chopping board
-  counter(f, 200, 220, '#c9cbc6', '#5a4030'); for (let i = 0; i < 10; i++) rect(f, 202 + i * 22 + (hash(i, 1) * 10 | 0), G0 - 10 + (hash(i, 2) * 2 | 0), 6 + (hash(i, 3) * 8 | 0), 1, '#a8acab');
-  L.slab = { x: 206, y: G0 - 12, w: 160 };
-  rect(f, 202, G0 - 13, 170, 3, '#e6ebef'); rect(f, 206, G0 - 14, 160, 1, '#f4f8fa'); f.fillStyle = ditherPattern(f, '#b8d0e0', 0.4); f.fillRect(202, G0 - 12, 170, 2);
-  rect(f, 204, G0 - 16, 6, 3, '#4a7a3a'); rect(f, 206, G0 - 18, 3, 2, '#5a8a44'); disc(f, 366, G0 - 15, 2, '#e8d04a'); disc(f, 371, G0 - 14, 2, '#f0dc5a');
-  rect(f, 380, G0 - 13, 12, 2, '#b8863a'); rect(f, 385, G0 - 24, 2, 11, '#b8863a'); rect(f, 376, G0 - 24, 20, 1, '#d8a84a'); rect(f, 376, G0 - 23, 1, 4, '#b8863a'); rect(f, 395, G0 - 23, 1, 4, '#b8863a'); rect(f, 373, G0 - 19, 7, 2, '#d8a84a'); rect(f, 392, G0 - 19, 7, 2, '#d8a84a');
-  rect(f, 402, G0 - 22, 18, 11, '#2d3038'); rect(f, 404, G0 - 21, 14, 4, '#3d414a'); for (let i = 0; i < 4; i++) rect(f, 405 + i * 3, G0 - 15, 2, 2, '#e8e2d2'); rect(f, 402, G0 - 24, 18, 2, '#4a4d56');
-  rect(f, 300, G0 - 13, 26, 2, '#c9a86a'); rect(f, 300, G0 - 13, 26, 1, '#e0c080');
+  counter(f, 200, 220, '#c9cbc6', '#5a4030'); for (let i = 0; i < 10; i++) rect(f, 202 + i * 22 + (hash(i, 1) * 10 | 0), G0 - 16 + (hash(i, 2) * 2 | 0), 6 + (hash(i, 3) * 8 | 0), 1, '#a8acab');
+  L.slab = { x: 206, y: G0 - 18, w: 160 };
+  rect(f, 202, G0 - 19, 170, 3, '#e6ebef'); rect(f, 206, G0 - 20, 160, 1, '#f4f8fa'); f.fillStyle = ditherPattern(f, '#b8d0e0', 0.4); f.fillRect(202, G0 - 18, 170, 2);
+  rect(f, 204, G0 - 22, 6, 3, '#4a7a3a'); rect(f, 206, G0 - 24, 3, 2, '#5a8a44'); disc(f, 366, G0 - 21, 2, '#e8d04a'); disc(f, 371, G0 - 20, 2, '#f0dc5a');
+  rect(f, 380, G0 - 19, 12, 2, '#b8863a'); rect(f, 385, G0 - 31, 2, 12, '#b8863a'); rect(f, 376, G0 - 31, 20, 1, '#d8a84a'); rect(f, 376, G0 - 30, 1, 5, '#b8863a'); rect(f, 395, G0 - 30, 1, 5, '#b8863a'); rect(f, 373, G0 - 25, 7, 2, '#d8a84a'); rect(f, 392, G0 - 25, 7, 2, '#d8a84a');
+  rect(f, 402, G0 - 30, 18, 13, '#2d3038'); rect(f, 404, G0 - 29, 14, 5, '#3d414a'); for (let i = 0; i < 4; i++) rect(f, 405 + i * 3, G0 - 22, 2, 2, '#e8e2d2'); rect(f, 402, G0 - 32, 18, 2, '#4a4d56');
+  rect(f, 300, G0 - 19, 26, 2, '#c9a86a'); rect(f, 300, G0 - 19, 26, 1, '#e0c080');
 }
 
 function bakeTackle(g, f, L, season) {
@@ -314,10 +299,10 @@ function bakeTackle(g, f, L, season) {
   door(g, L, 20, G0 - 36, 36, '#5c4030');
   coatRack(g, 58, G0); clockFace(g, L, 62, 218, 8);
   // rod rack; the rods are live because they depend on what you own
-  rect(g, 76, 236, 124, G0 - 4 - 236, '#5a4030'); outline(g, 76, 236, 124, G0 - 4 - 236, '#3e2c20'); rect(g, 76, 240, 124, 3, '#7a5a3a'); rect(g, 76, G0 - 24, 124, 3, '#7a5a3a');
-  for (let i = 0; i < 4; i++) { const rx = 92 + i * 30; rect(g, rx - 3, 240, 7, 3, '#3e2c20'); rect(g, rx - 3, G0 - 24, 7, 3, '#3e2c20'); }
-  L.rack = { x: 92, step: 30, top: 246, bottom: G0 - 26, tag: G0 - 18 };
-  text(g, 'RODS', 138, 226, { color: '#e8b04a', align: 'center', shadow: '#2a1a10' });
+  rect(g, 76, 220, 124, G0 - 4 - 220, '#5a4030'); outline(g, 76, 220, 124, G0 - 4 - 220, '#3e2c20'); rect(g, 76, 224, 124, 3, '#7a5a3a'); rect(g, 76, G0 - 24, 124, 3, '#7a5a3a');
+  for (let i = 0; i < 4; i++) { const rx = 92 + i * 30; rect(g, rx - 3, 224, 7, 3, '#3e2c20'); rect(g, rx - 3, G0 - 24, 7, 3, '#3e2c20'); }
+  L.rack = { x: 92, step: 30, top: 230, bottom: G0 - 26, tag: G0 - 18 };
+  text(g, 'RODS', 138, 210, { color: '#e8b04a', align: 'center', shadow: '#2a1a10' });
   windowFrame(g, L, 220, 208, 56, 24, { trim: '#c9b28a', curtains: '#7a3a3a' });
   shelf(g, 212, 250, 92, '#4a3324'); L.spools = { x: 218, y: 250, step: 22 };
   shelf(g, 212, 270, 92, '#4a3324'); jar(g, 216, 270, 10, '#a8b890'); jar(g, 224, 270, 8, '#c9a86a'); rect(g, 234, 260, 14, 10, '#3d6b5a'); rect(g, 235, 261, 12, 3, '#e8e2d2'); rect(g, 252, 263, 10, 7, '#8a3a3a'); rect(g, 266, 261, 8, 9, '#c9b28a'); rect(g, 278, 265, 20, 5, '#2d3038'); rect(g, 279, 266, 18, 1, '#5a5d66');
@@ -328,17 +313,17 @@ function bakeTackle(g, f, L, season) {
   for (let y = 0; y < 34; y++) for (let x = 0; x < 40; x++) if (lakeNorm(x * 16, y * 10.6) < 1) rect(g, 464 + x, 212 + y, 1, 1, lakeNorm(x * 16, y * 10.6) < 0.5 ? '#3e6f90' : '#5f8fb0');
   rect(g, 474, 238, 2, 2, '#e0685a'); text(g, 'LAKE', 484, 245, { color: '#5a4a34', align: 'center', shadow: false });
   rect(g, 464, 258, 40, 28, '#e8e2d2'); rect(g, 464, 258, 40, 8, '#8a3a3a'); L.calendar = { x: 484, y: 259 };
-  stove(g, L, 464, G0, 'potbelly', ceil); rect(g, 490, G0 - 9, 16, 9, '#6a5438'); for (let i = 0; i < 4; i++) rect(g, 491 + i * 4, G0 - 13, 3, 5, '#8a6a44');
-  rect(g, 212, G0 - 12, 12, 12, '#8a8a80'); rect(g, 213, G0 - 12, 1, 12, '#b8b8b0'); rect(g, 211, G0 - 13, 14, 1, '#6a6a60'); rect(g, 210, G0 - 24, 16, 10, '#e8e2d2'); text(g, 'FREE', 218, G0 - 23, { color: '#3a2a1c', align: 'center', shadow: false });
+  stove(g, L, 464, G0, 'potbelly', ceil); rect(g, 492, G0 - 12, 18, 12, '#6a5438'); for (let i = 0; i < 4; i++) rect(g, 493 + i * 4, G0 - 17, 3, 6, '#8a6a44');
+  rect(g, 210, G0 - 16, 16, 16, '#8a8a80'); rect(g, 211, G0 - 16, 1, 16, '#b8b8b0'); rect(g, 209, G0 - 17, 18, 1, '#6a6a60'); rect(g, 208, G0 - 28, 20, 10, '#e8e2d2'); text(g, 'FREE', 218, G0 - 27, { color: '#3a2a1c', align: 'center', shadow: false });
   hangingLamp(g, L, 150, 226, ceil, '#8a3a3a'); hangingLamp(g, L, 400, 228, ceil, '#8a3a3a');
   // front: the glass counter with reels and fly boxes inside; vise and magnifier on top
-  rect(f, 236, G0 - 12, 148, 12, '#5a4030'); rect(f, 240, G0 - 10, 140, 8, '#2c3f50'); rect(f, 240, G0 - 10, 140, 2, '#4c6a86'); outline(f, 239, G0 - 11, 142, 10, '#b8863a');
-  for (let i = 0; i < 5; i++) { const rx = 248 + i * 26; disc(f, rx + 4, G0 - 6, 2, '#8a8a80'); rect(f, rx + 12, G0 - 7, 8, 4, i % 2 ? '#8a3a3a' : '#3d6b5a'); rect(f, rx + 13, G0 - 6, 6, 1, '#e8e2d2'); }
-  rect(f, 232, G0 - 15, 156, 3, '#c9b28a'); hline(f, 232, G0 - 15, 156, '#e0c890'); hline(f, 232, G0 - 13, 156, '#8a6a44');
-  rect(f, 296, G0 - 22, 3, 7, '#2d3038'); rect(f, 292, G0 - 24, 12, 2, '#3a3a3c'); rect(f, 302, G0 - 26, 4, 3, '#5a5d66');
-  rect(f, 330, G0 - 17, 2, 2, '#2d3038'); rect(f, 331, G0 - 30, 1, 13, '#3a3a3c'); rect(f, 326, G0 - 32, 12, 3, '#2d3038'); L.lamps.push({ x: 332, y: G0 - 27, r: 30, color: '#ffe6b0', kind: 'mag', on: 'always', w: 10, glass: [327, G0 - 29, 10, 1] });
-  rect(f, 350, G0 - 19, 14, 4, '#8a3a3a'); for (let i = 0; i < 3; i++) rect(f, 352 + i * 4, G0 - 18, 2, 2, ['#e8b04a', '#7fe0c3', '#ff8c66'][i]);
-  rect(f, 254, G0 - 21, 1, 6, '#e0685a'); rect(f, 256, G0 - 23, 1, 8, '#7fe0c3'); rect(f, 258, G0 - 20, 1, 5, '#e8b04a');
+  rect(f, 236, G0 - 16, 148, 16, '#5a4030'); rect(f, 240, G0 - 14, 140, 11, '#2c3f50'); rect(f, 240, G0 - 14, 140, 2, '#4c6a86'); outline(f, 239, G0 - 15, 142, 13, '#b8863a');
+  for (let i = 0; i < 5; i++) { const rx = 248 + i * 26; disc(f, rx + 4, G0 - 8, 3, '#8a8a80'); disc(f, rx + 4, G0 - 8, 1, '#3a3a3c'); rect(f, rx + 12, G0 - 10, 9, 5, i % 2 ? '#8a3a3a' : '#3d6b5a'); rect(f, rx + 13, G0 - 9, 7, 1, '#e8e2d2'); }
+  rect(f, 232, G0 - 19, 156, 3, '#c9b28a'); hline(f, 232, G0 - 19, 156, '#e0c890'); hline(f, 232, G0 - 17, 156, '#8a6a44');
+  rect(f, 296, G0 - 27, 3, 8, '#2d3038'); rect(f, 292, G0 - 29, 12, 2, '#3a3a3c'); rect(f, 302, G0 - 31, 4, 3, '#5a5d66');
+  rect(f, 330, G0 - 21, 2, 2, '#2d3038'); rect(f, 331, G0 - 36, 1, 15, '#3a3a3c'); rect(f, 326, G0 - 38, 12, 3, '#2d3038'); L.lamps.push({ x: 332, y: G0 - 33, r: 34, color: '#ffe6b0', kind: 'mag', on: 'always', w: 10, glass: [327, G0 - 35, 10, 1] });
+  rect(f, 350, G0 - 24, 14, 5, '#8a3a3a'); for (let i = 0; i < 3; i++) rect(f, 352 + i * 4, G0 - 23, 2, 2, ['#e8b04a', '#7fe0c3', '#ff8c66'][i]);
+  rect(f, 254, G0 - 26, 1, 7, '#e0685a'); rect(f, 256, G0 - 28, 1, 9, '#7fe0c3'); rect(f, 258, G0 - 25, 1, 6, '#e8b04a');
 }
 
 function bakeBoatyard(g, f, L, season) {
@@ -371,12 +356,13 @@ function bakeBoatyard(g, f, L, season) {
   rect(g, 532, 196, 68, 5, '#3a3d3c'); rect(g, 596, 200, 4, G0 - 200, '#4a4744'); rect(g, 536, 200, 6, G0 - 200, '#4a4744');
   cageLamp(g, L, 240, ceil, 22); cageLamp(g, L, 420, ceil, 20);
   // front: trestles (the hull is live), the workbench, an anchor and chain, sawdust
-  for (const tx of [176, 300]) { rect(f, tx - 12, G0 - 12, 24, 2, '#6a5438'); rect(f, tx - 10, G0 - 10, 3, 10, '#5a4a34'); rect(f, tx + 7, G0 - 10, 3, 10, '#5a4a34'); rect(f, tx - 13, G0 - 5, 26, 1, '#5a4a34'); }
-  rect(f, 346, G0 - 14, 96, 4, '#8a6a44'); hline(f, 346, G0 - 14, 96, '#a88a5c'); rect(f, 348, G0 - 10, 5, 10, '#5a4a34'); rect(f, 435, G0 - 10, 5, 10, '#5a4a34'); rect(f, 348, G0 - 5, 92, 2, '#6a5438');
-  rect(f, 352, G0 - 21, 12, 7, '#2d3038'); rect(f, 349, G0 - 19, 6, 3, '#3a3d46'); rect(f, 366, G0 - 18, 4, 4, '#3a3d46');
-  for (let i = 0; i < 3; i++) { rect(f, 384 + i * 12, G0 - 22, 9, 8, ['#e0685a', '#3d6b8a', '#e8e2d2'][i]); rect(f, 385 + i * 12, G0 - 23, 7, 2, '#8a8a80'); }
-  rect(f, 424, G0 - 23, 16, 9, '#5a4030'); rect(f, 426, G0 - 21, 8, 5, '#c9b28a'); rect(f, 436, G0 - 21, 2, 2, '#e8b04a'); rect(f, 426, G0 - 16, 12, 1, '#3a2a1c');
-  rect(f, 132, G0 - 24, 3, 24, '#5a5d66'); rect(f, 124, G0 - 18, 19, 2, '#5a5d66'); rect(f, 120, G0 - 7, 6, 3, '#5a5d66'); rect(f, 141, G0 - 7, 6, 3, '#5a5d66'); rect(f, 122, G0 - 5, 24, 3, '#5a5d66'); disc(f, 133, G0 - 26, 3, '#5a5d66'); disc(f, 133, G0 - 26, 1, '#4a4c4d');
+  for (const tx of [176, 300]) { rect(f, tx - 14, G0 - 18, 28, 3, '#6a5438'); rect(f, tx - 12, G0 - 15, 3, 15, '#5a4a34'); rect(f, tx + 9, G0 - 15, 3, 15, '#5a4a34'); rect(f, tx - 15, G0 - 8, 30, 2, '#5a4a34'); }
+  rect(f, 346, G0 - 20, 96, 5, '#8a6a44'); hline(f, 346, G0 - 20, 96, '#a88a5c'); rect(f, 348, G0 - 15, 6, 15, '#5a4a34'); rect(f, 434, G0 - 15, 6, 15, '#5a4a34'); rect(f, 348, G0 - 7, 92, 2, '#6a5438');
+  rect(f, 352, G0 - 28, 12, 8, '#2d3038'); rect(f, 349, G0 - 26, 6, 3, '#3a3d46'); rect(f, 366, G0 - 25, 4, 4, '#3a3d46');
+  for (let i = 0; i < 3; i++) { rect(f, 384 + i * 12, G0 - 29, 9, 9, ['#e0685a', '#3d6b8a', '#e8e2d2'][i]); rect(f, 385 + i * 12, G0 - 30, 7, 2, '#8a8a80'); }
+  rect(f, 424, G0 - 31, 16, 11, '#5a4030'); rect(f, 426, G0 - 29, 8, 6, '#c9b28a'); rect(f, 436, G0 - 29, 2, 2, '#e8b04a'); rect(f, 426, G0 - 22, 12, 1, '#3a2a1c');
+  rect(f, 360, G0 - 14, 30, 14, '#6a5438'); for (let i = 0; i < 3; i++) rect(f, 362 + i * 9, G0 - 12, 7, 10, '#7a6448'); rect(f, 360, G0 - 14, 30, 1, '#8a7458');
+  rect(f, 132, G0 - 30, 3, 30, '#5a5d66'); rect(f, 124, G0 - 23, 19, 2, '#5a5d66'); rect(f, 120, G0 - 8, 6, 3, '#5a5d66'); rect(f, 141, G0 - 8, 6, 3, '#5a5d66'); rect(f, 122, G0 - 6, 24, 3, '#5a5d66'); disc(f, 133, G0 - 32, 3, '#5a5d66'); disc(f, 133, G0 - 32, 1, '#4a4c4d');
   for (let i = 0; i < 8; i++) rect(f, 100 + i * 4, G0 - 3 + (i % 2), 3, 2, '#5a5d66');
   f.fillStyle = ditherPattern(f, '#c0a870', 0.5); ellipse2(f, 240, G0 + 4, 50, 3);
 }
@@ -391,16 +377,16 @@ function bakeHouse1(g, f, L, season) {   // Marla: rose paper, rocking chair, st
   door(g, L, 20, G0 - 36, 36, '#5c4030');
   windowFrame(g, L, 78, 218, 44, 28, { trim: '#e8e2d2', curtains: '#e8d8c8', plant: true, lace: true });
   // dresser with plates and a teapot
-  rect(g, 154, G0 - 30, 60, 30, '#8a6a44'); rect(g, 154, G0 - 32, 60, 3, '#a88a5c'); for (let i = 0; i < 3; i++) { rect(g, 158, G0 - 27 + i * 9, 52, 7, '#6a4a30'); rect(g, 181, G0 - 24 + i * 9, 6, 2, '#e8b04a'); }
+  rect(g, 154, G0 - 44, 60, 44, '#8a6a44'); rect(g, 154, G0 - 46, 60, 3, '#a88a5c'); for (let i = 0; i < 3; i++) { rect(g, 158, G0 - 40 + i * 13, 52, 10, '#6a4a30'); rect(g, 181, G0 - 36 + i * 13, 6, 2, '#e8b04a'); }
   shelf(g, 150, 232, 68, '#8a6a44'); for (let i = 0; i < 4; i++) { disc(g, 160 + i * 16, 228, 4, '#e8e2d2'); disc(g, 160 + i * 16, 228, 2, '#6a9ab8'); }
-  rect(g, 160, G0 - 40, 12, 8, '#8fb4cc'); rect(g, 158, G0 - 38, 2, 3, '#8fb4cc'); rect(g, 172, G0 - 37, 3, 2, '#8fb4cc'); rect(g, 164, G0 - 42, 4, 2, '#8fb4cc');
+  rect(g, 160, G0 - 54, 12, 8, '#8fb4cc'); rect(g, 158, G0 - 52, 2, 3, '#8fb4cc'); rect(g, 172, G0 - 51, 3, 2, '#8fb4cc'); rect(g, 164, G0 - 56, 4, 2, '#8fb4cc');
   picture(g, 232, 212, 18, 18, 'portrait'); picture(g, 258, 210, 26, 16, 'boat'); picture(g, 292, 214, 18, 14, 'lake'); clockFace(g, L, 338, 224, 8);
-  rect(g, 226, G0 - 8, 18, 8, '#c9a86a'); outline(g, 226, G0 - 8, 18, 8, '#8a6a44'); disc(g, 231, G0 - 10, 3, '#c46a6a'); disc(g, 238, G0 - 10, 3, '#5a6a8a'); disc(g, 235, G0 - 13, 2, '#e8e2d2');
+  rect(g, 224, G0 - 12, 22, 12, '#c9a86a'); outline(g, 224, G0 - 12, 22, 12, '#8a6a44'); disc(g, 230, G0 - 14, 4, '#c46a6a'); disc(g, 239, G0 - 14, 4, '#5a6a8a'); disc(g, 235, G0 - 18, 3, '#e8e2d2');
   stove(g, L, 380, G0, 'range', ceil);
   shelf(g, 372, 246, 52, '#6a5438'); for (let i = 0; i < 5; i++) jar(g, 374 + i * 10, 246, 6 + (i % 2) * 2, ['#c9a86a', '#8a3a3a', '#a8b890', '#d8c48a', '#6a4a7a'][i]);
   bed(g, 440, G0, 62, ['#8a3a3a', '#d8c48a']);
-  rect(g, 420, G0 - 14, 16, 2, '#6a4a30'); rect(g, 422, G0 - 12, 2, 12, '#6a4a30'); rect(g, 432, G0 - 12, 2, 12, '#6a4a30'); tableLamp(g, L, 428, G0 - 14, '#e8c890', 56);
-  table(g, 296, G0, 30, '#6a4a30', 10); rect(g, 302, G0 - 14, 6, 4, '#e8e2d2'); rect(g, 308, G0 - 13, 2, 2, '#e8e2d2'); candle(g, L, 318, G0 - 10);
+  rect(g, 418, G0 - 22, 20, 3, '#6a4a30'); rect(g, 420, G0 - 19, 3, 19, '#6a4a30'); rect(g, 433, G0 - 19, 3, 19, '#6a4a30'); tableLamp(g, L, 428, G0 - 22, '#e8c890', 56);
+  table(g, 296, G0, 30, '#6a4a30', 14); rect(g, 302, G0 - 18, 6, 4, '#e8e2d2'); rect(g, 308, G0 - 17, 2, 2, '#e8e2d2'); candle(g, L, 318, G0 - 14);
   L.chair = { x: 262, y: G0 };
   hangingLamp(g, L, 300, 226, ceil, '#d8c48a', 66, 'dim');
 }
@@ -419,14 +405,14 @@ function bakeHouse2(g, f, L, season) {   // the Okafors: books, a desk, a radio,
   windowFrame(g, L, 270, 214, 64, 30, { trim: '#e8e2d2', curtains: '#c46a5a' });
   clockFace(g, L, 356, 222, 8);
   sofa(g, 386, G0, 70);
-  rect(g, 464, G0 - 14, 26, 2, '#6a4a30'); rect(g, 466, G0 - 12, 2, 12, '#6a4a30'); rect(g, 486, G0 - 12, 2, 12, '#6a4a30');
-  rect(g, 468, G0 - 26, 20, 12, '#5a4030'); rect(g, 470, G0 - 24, 9, 8, '#c9b28a'); rect(g, 481, G0 - 24, 5, 5, '#e8b04a'); rect(g, 481, G0 - 18, 5, 1, '#e8e2d2'); rect(g, 472, G0 - 22, 5, 1, '#3a2a1c'); rect(g, 472, G0 - 20, 5, 1, '#3a2a1c'); L.lamps.push({ x: 483.5, y: G0 - 22, r: 14, color: '#ffd28a', kind: 'radio', on: 'always', w: 5, glass: [481, G0 - 24, 5, 5] });
-  rect(g, 360, G0 - 20, 22, 20, '#4a3324'); rect(g, 362, G0 - 10, 18, 8, '#3e2c20'); rect(g, 360, G0 - 24, 22, 4, '#6a4a30'); disc(g, 370, G0 - 24, 5, '#1a1a1c'); disc(g, 370, G0 - 24, 2, '#c46a5a'); rect(g, 378, G0 - 28, 1, 5, '#8a8a80');
-  rect(g, 500, G0 - 18, 2, 18, '#3a3a3c'); disc(g, 501, G0 - 23, 5, '#3e6f90'); rect(g, 498, G0 - 25, 3, 2, '#5a8a44'); rect(g, 502, G0 - 21, 3, 3, '#5a8a44');
+  rect(g, 462, G0 - 22, 30, 3, '#6a4a30'); rect(g, 464, G0 - 19, 3, 19, '#6a4a30'); rect(g, 487, G0 - 19, 3, 19, '#6a4a30');
+  rect(g, 466, G0 - 36, 24, 14, '#5a4030'); rect(g, 468, G0 - 34, 11, 10, '#c9b28a'); rect(g, 481, G0 - 34, 6, 6, '#e8b04a'); rect(g, 481, G0 - 26, 6, 1, '#e8e2d2'); rect(g, 470, G0 - 32, 7, 1, '#3a2a1c'); rect(g, 470, G0 - 30, 7, 1, '#3a2a1c'); rect(g, 470, G0 - 28, 7, 1, '#3a2a1c'); L.lamps.push({ x: 484, y: G0 - 31, r: 16, color: '#ffd28a', kind: 'radio', on: 'always', w: 6, glass: [481, G0 - 34, 6, 6] });
+  rect(g, 358, G0 - 30, 26, 30, '#4a3324'); rect(g, 360, G0 - 16, 22, 12, '#3e2c20'); rect(g, 358, G0 - 34, 26, 4, '#6a4a30'); disc(g, 370, G0 - 34, 6, '#1a1a1c'); disc(g, 370, G0 - 34, 2, '#c46a5a'); rect(g, 379, G0 - 39, 1, 6, '#8a8a80');
+  rect(g, 500, G0 - 28, 2, 28, '#3a3a3c'); rect(g, 496, G0 - 2, 10, 2, '#3a3a3c'); disc(g, 501, G0 - 34, 6, '#3e6f90'); rect(g, 498, G0 - 36, 3, 2, '#5a8a44'); rect(g, 502, G0 - 32, 4, 3, '#5a8a44');
   // front: the desk. Tunde sits behind it.
-  rect(f, 236, G0 - 10, 80, 3, '#7a5a3a'); hline(f, 236, G0 - 10, 80, '#a88a5c'); rect(f, 238, G0 - 7, 76, 7, '#5a4030'); rect(f, 242, G0 - 5, 30, 3, '#4a3324'); rect(f, 280, G0 - 5, 30, 3, '#4a3324'); rect(f, 244, G0 - 4, 4, 1, '#e8b04a'); rect(f, 282, G0 - 4, 4, 1, '#e8b04a');
-  rect(f, 296, G0 - 13, 8, 3, '#2d3038'); rect(f, 290, G0 - 15, 2, 5, '#e8b04a');
-  deskLamp(f, L, 306, G0 - 10, 'dim', -1);
+  rect(f, 236, G0 - 16, 80, 3, '#7a5a3a'); hline(f, 236, G0 - 16, 80, '#a88a5c'); rect(f, 238, G0 - 13, 76, 13, '#5a4030'); rect(f, 242, G0 - 10, 30, 5, '#4a3324'); rect(f, 280, G0 - 10, 30, 5, '#4a3324'); rect(f, 244, G0 - 8, 4, 1, '#e8b04a'); rect(f, 282, G0 - 8, 4, 1, '#e8b04a');
+  rect(f, 296, G0 - 19, 8, 3, '#2d3038'); rect(f, 290, G0 - 21, 2, 5, '#e8b04a');
+  deskLamp(f, L, 306, G0 - 16, 'dim', -1);
   L.desk = { x: 276, y: G0 };
   hangingLamp(g, L, 300, 226, ceil, '#e8e2d2', 66, 'dim');
 }
@@ -439,19 +425,19 @@ function bakeHouse3(g, f, L, season) {   // Bram: dark planks, hearth, nets, the
   floorBoards(g, w, '#4e3826');
   rug(g, 180, 310, 120, 28, '#6a5438', '#c9b28a', false);
   door(g, L, 20, G0 - 36, 36, '#3e2c20');
-  boots(g, 58, G0, '#4a3324'); rect(g, 70, G0 - 30, 2, 30, '#3a2a1c'); rect(g, 64, G0 - 32, 14, 3, '#3a2a1c'); rect(g, 60, G0 - 28, 10, 18, '#c9b28a'); rect(g, 58, G0 - 29, 14, 4, '#c9b28a');
+  boots(g, 58, G0, '#4a3324'); rect(g, 80, G0 - 46, 3, 46, '#3a2a1c'); rect(g, 74, G0 - 48, 16, 3, '#3a2a1c'); rect(g, 70, G0 - 44, 10, 24, '#c9b28a'); rect(g, 68, G0 - 45, 14, 4, '#c9b28a');
   net(g, 90, 214, 56, 30, '#a89a7c'); ropeCoil(g, 160, 222); rect(g, 100, G0 - 40, 3, 3, '#e0685a'); rect(g, 130, G0 - 44, 3, 3, '#e8e2d2');
   windowFrame(g, L, 176, 218, 52, 28, { trim: '#8a7a5c', curtains: '#5a6a5a' });
   fireplace(g, L, 320, G0, 64);
-  rect(g, 322, G0 - 56, 60, 16, '#2d3038'); rect(g, 324, G0 - 55, 56, 14, '#8a7a5c'); rect(g, 330, G0 - 51, 44, 7, '#7d9c5b'); rect(g, 330, G0 - 51, 44, 2, '#5e7a44'); rect(g, 366, G0 - 53, 10, 4, '#7d9c5b'); rect(g, 372, G0 - 55, 4, 3, '#5e7a44'); rect(g, 326, G0 - 49, 8, 4, '#7d9c5b'); rect(g, 328, G0 - 48, 2, 1, '#e8e2d2'); for (let i = 0; i < 5; i++) rect(g, 336 + i * 8, G0 - 46, 3, 1, '#c9d8a0');
-  rect(g, 312, G0 - 44, 8, 8, '#a8c8a0'); rect(g, 313, G0 - 41, 6, 3, '#5c4030'); rect(g, 315, G0 - 43, 2, 2, '#e8e2d2'); rect(g, 320, G0 - 45, 2, 3, '#a08a5c');
-  rect(g, 386, G0 - 52, 5, 12, '#8a8a80'); rect(g, 387, G0 - 50, 3, 8, '#e8e2d2'); L.barometer = { x: 388, y: G0 - 46 };
-  rect(g, 300, G0 - 62, 100, 3, '#8a6a44'); rect(g, 300, G0 - 62, 10, 3, '#a88a5c');
+  rect(g, 320, G0 - 74, 64, 18, '#2d3038'); rect(g, 322, G0 - 73, 60, 16, '#8a7a5c'); rect(g, 328, G0 - 68, 48, 8, '#7d9c5b'); rect(g, 328, G0 - 68, 48, 2, '#5e7a44'); rect(g, 366, G0 - 71, 10, 5, '#7d9c5b'); rect(g, 372, G0 - 73, 5, 3, '#5e7a44'); rect(g, 324, G0 - 66, 8, 4, '#7d9c5b'); rect(g, 326, G0 - 65, 2, 1, '#e8e2d2'); for (let i = 0; i < 5; i++) rect(g, 334 + i * 8, G0 - 62, 3, 1, '#c9d8a0');
+  rect(g, 308, G0 - 58, 10, 8, '#a8c8a0'); rect(g, 309, G0 - 55, 8, 3, '#5c4030'); rect(g, 312, G0 - 57, 2, 2, '#e8e2d2'); rect(g, 318, G0 - 59, 2, 3, '#a08a5c');
+  rect(g, 388, G0 - 66, 5, 12, '#8a8a80'); rect(g, 389, G0 - 64, 3, 8, '#e8e2d2'); L.barometer = { x: 390, y: G0 - 60 };
+  rect(g, 300, G0 - 80, 100, 3, '#8a6a44'); rect(g, 300, G0 - 80, 10, 3, '#a88a5c');
   picture(g, 424, 214, 40, 24, 'lake', '#3e2c20'); clockFace(g, L, 488, 224, 8);
-  rect(g, 438, G0 - 44, 1, 8, '#3a3a3c'); rect(g, 436, G0 - 36, 5, 5, '#e8b04a'); rect(g, 437, G0 - 35, 3, 3, '#fff2c0'); L.lamps.push({ x: 438.5, y: G0 - 34, r: 46, color: '#ffb257', kind: 'lantern', on: 'dim', w: 3, glass: [437, G0 - 35, 3, 3] });
+  rect(g, 438, G0 - 56, 1, 8, '#3a3a3c'); rect(g, 435, G0 - 48, 7, 7, '#e8b04a'); rect(g, 436, G0 - 47, 5, 5, '#fff2c0'); L.lamps.push({ x: 438.5, y: G0 - 45, r: 50, color: '#ffb257', kind: 'lantern', on: 'dim', w: 5, glass: [436, G0 - 47, 5, 5] });
   bed(g, 450, G0, 56, ['#3d6b5a', '#c9b28a'], '#d8d0bc');
-  L.chair = { x: 262, y: G0 }; armchair(g, 246, G0, '#6a4a4a');
-  table(g, 210, G0, 24, '#4e3826', 9); rect(g, 214, G0 - 13, 8, 4, '#c9b28a'); rect(g, 222, G0 - 12, 4, 2, '#3a2a1c');
+  L.chair = { x: 264, y: G0 }; armchair(g, 244, G0, '#6a4a4a');
+  table(g, 206, G0, 28, '#4e3826', 14); rect(g, 212, G0 - 18, 8, 4, '#c9b28a'); rect(g, 220, G0 - 17, 4, 2, '#3a2a1c');
   hangingLamp(g, L, 300, 228, ceil, '#5a4a34', 56, 'dim');
 }
 
@@ -469,17 +455,17 @@ function bakeHouse4(g, f, L, season) {   // the Reyes home: warm paper, crayon a
   rect(g, 206, 224, 6, 6, '#f2c14e'); rect(g, 208, 222, 2, 10, '#f2c14e'); rect(g, 204, 226, 10, 2, '#f2c14e');
   clockFace(g, L, 278, 224, 8);
   stove(g, L, 300, G0, 'range', ceil); shelf(g, 296, 250, 44, '#a88a5c'); for (let i = 0; i < 4; i++) jar(g, 300 + i * 10, 250, 6, ['#e0685a', '#5a6a8a', '#e8b04a', '#7fe0c3'][i]);
-  rect(g, 350, G0 - 24, 3, 24, '#c9b28a'); rect(g, 366, G0 - 24, 3, 24, '#c9b28a'); rect(g, 350, G0 - 16, 19, 3, '#c9b28a'); rect(g, 352, G0 - 28, 16, 4, '#e0685a'); rect(g, 350, G0 - 12, 19, 2, '#c9b28a');
+  rect(g, 350, G0 - 36, 3, 36, '#c9b28a'); rect(g, 366, G0 - 36, 3, 36, '#c9b28a'); rect(g, 350, G0 - 24, 19, 3, '#c9b28a'); rect(g, 352, G0 - 40, 16, 4, '#e0685a'); rect(g, 350, G0 - 16, 19, 2, '#c9b28a'); rect(g, 352, G0 - 34, 15, 8, '#e0685a');
   // bunk bed on the right with a ladder; toys scattered on the floor
-  rect(g, 400, G0 - 40, 3, 40, '#8a6a44'); rect(g, 480, G0 - 40, 3, 40, '#8a6a44'); rect(g, 400, G0 - 40, 83, 3, '#8a6a44');
-  rect(g, 403, G0 - 26, 77, 4, '#a88a5c'); rect(g, 404, G0 - 30, 75, 4, '#5a6a8a'); rect(g, 406, G0 - 32, 12, 3, '#e8e2d2');
-  rect(g, 403, G0 - 4, 77, 4, '#a88a5c'); rect(g, 404, G0 - 8, 75, 4, '#e0685a'); rect(g, 406, G0 - 10, 12, 3, '#e8e2d2');
-  for (let i = 0; i < 4; i++) rect(g, 486, G0 - 36 + i * 9, 12, 2, '#8a6a44'); rect(g, 486, G0 - 38, 2, 38, '#8a6a44'); rect(g, 496, G0 - 38, 2, 38, '#8a6a44');
+  rect(g, 400, G0 - 60, 4, 60, '#8a6a44'); rect(g, 480, G0 - 60, 4, 60, '#8a6a44'); rect(g, 400, G0 - 60, 84, 3, '#8a6a44');
+  rect(g, 404, G0 - 40, 76, 5, '#a88a5c'); rect(g, 405, G0 - 45, 74, 5, '#5a6a8a'); rect(g, 407, G0 - 48, 14, 4, '#e8e2d2');
+  rect(g, 404, G0 - 8, 76, 5, '#a88a5c'); rect(g, 405, G0 - 13, 74, 5, '#e0685a'); rect(g, 407, G0 - 16, 14, 4, '#e8e2d2');
+  for (let i = 0; i < 5; i++) rect(g, 487, G0 - 54 + i * 11, 12, 2, '#8a6a44'); rect(g, 487, G0 - 58, 2, 58, '#8a6a44'); rect(g, 497, G0 - 58, 2, 58, '#8a6a44');
   rect(g, 216, G0 - 6, 6, 6, '#e0685a'); rect(g, 223, G0 - 6, 6, 6, '#5a6a8a'); rect(g, 219, G0 - 12, 6, 6, '#e8b04a'); disc(g, 250, G0 - 4, 4, '#7fe0c3'); rect(g, 248, G0 - 5, 2, 2, '#e8e2d2');
-  shelf(g, 462, G0 - 44, 24, '#a88a5c'); tableLamp(g, L, 474, G0 - 44, '#e8c890', 50, 'dim'); L.nightlight = { x: 410, y: G0 - 14 };
-  rect(g, 408, G0 - 18, 4, 4, '#c9b28a'); rect(g, 409, G0 - 20, 2, 2, '#f2c14e');
+  shelf(g, 462, G0 - 66, 24, '#a88a5c'); tableLamp(g, L, 474, G0 - 66, '#e8c890', 50, 'dim'); L.nightlight = { x: 410, y: G0 - 22 };
+  rect(g, 408, G0 - 26, 4, 4, '#c9b28a'); rect(g, 409, G0 - 28, 2, 2, '#f2c14e');
   // front: the kitchen table with the sewing machine; Elena sits behind it
-  table(f, 130, G0, 96, '#a88a5c', 9); rect(f, 150, G0 - 18, 28, 9, '#2d3038'); rect(f, 152, G0 - 16, 24, 2, '#e0685a'); rect(f, 172, G0 - 23, 4, 6, '#2d3038'); rect(f, 156, G0 - 25, 14, 2, '#3a3d46'); rect(f, 190, G0 - 13, 12, 4, '#7fe0c3'); rect(f, 204, G0 - 12, 8, 3, '#e0685a');
+  table(f, 130, G0, 96, '#a88a5c', 14); rect(f, 150, G0 - 25, 28, 11, '#2d3038'); rect(f, 152, G0 - 23, 24, 2, '#e0685a'); rect(f, 172, G0 - 31, 4, 7, '#2d3038'); rect(f, 156, G0 - 33, 14, 3, '#3a3d46'); rect(f, 190, G0 - 18, 12, 4, '#7fe0c3'); rect(f, 204, G0 - 17, 8, 3, '#e0685a');
   L.table = { x: 168, y: G0 };
   hangingLamp(g, L, 250, 226, ceil, '#e8e2d2', 66, 'dim');
 }
@@ -622,30 +608,37 @@ function chalkboard(ctx, L, state, season) {
     text(ctx, `${f.ppk}g/kg`, b.x + b.w - 5, b.y + 14 + i * 9, { color: '#e8c96a', align: 'right', shadow: false });
   }
 }
-function liveFishmonger(G, state, p, L, layer, ctx, clock, sleeping) {
+const KEEPERS = {
+  hesper: { pal: { h: '#3a2a1c', s: '#c9956a', c: '#3d5468', d: '#2d3038', b: '#1a1720', a: '#e8e2d2', t: '#e8e2d2' }, apron: true, hat: 'kerchief', hair: 'short' },
+  ansel:  { pal: { h: '#8a7a5c', s: '#e6c3a0', c: '#5a6a3a', d: '#4a3324', b: '#1a1720', t: '#5a4030' }, hat: 'cap', glasses: true, hair: 'short' },
+  dov:    { pal: { h: '#3a2a1c', s: '#c9956a', c: '#3d6b8a', d: '#4a4744', b: '#1a1720', t: '#e8b04a' }, hat: 'brim', beard: true },
+  marla:  { pal: { h: '#d8d0bc', s: '#e6c3a0', c: '#8a5a7a', d: '#5a4a4a', b: '#3a2a1c' }, hair: 'bun', glasses: true },
+  tunde:  { pal: { h: '#1a1712', s: '#7a4a2a', c: '#c46a5a', d: '#3d4a54', b: '#1a1720' }, glasses: true, hair: 'short' },
+  ada:    { pal: { h: '#2a1a10', s: '#8a5a3a', c: '#e8b04a', d: '#5a4a4a', b: '#3a2a1c' }, hair: 'curls' },
+  bram:   { pal: { h: '#d8d0bc', s: '#c9956a', c: '#3d6b5a', d: '#4a3324', b: '#1a1720' }, hair: 'bald', beard: true },
+  elena:  { pal: { h: '#2a1a10', s: '#c9956a', c: '#5a8a44', d: '#5a4a4a', b: '#3a2a1c' }, hair: 'long' },
+  nico:   { pal: { h: '#2a1a10', s: '#d8a880', c: '#e0685a', d: '#5a6a8a', b: '#3a2a1c', t: '#3d6b8a' }, hat: 'cap' },
+};
+function liveFishmonger(G, state, p, L, layer, ctx, clock, sleeping, others) {
   if (layer === 'back') {
     chalkboard(ctx, L, state, G.season);
-    // Hesper behind the counter, chopping
-    const pal = { h: '#3a2a1c', s: '#c9956a', e: '#1a1712', c: '#3d5468', a: '#e8e2d2', d: '#2d3038', b: '#1a1720' };
-    const frame = G.reduceMotion ? 0 : Math.floor(clock * 2) % 2, x = 330, y = G0 - 8;
-    person(ctx, frame ? NPC_B : NPC_A, pal, x, y);
-    ctx.fillStyle = '#b8bcc0'; if (frame) { ctx.fillRect(x + 5, y - 24, 3, 6); ctx.fillStyle = '#5a4030'; ctx.fillRect(x + 5, y - 18, 2, 2); } else { ctx.fillRect(x + 5, y - 14, 3, 5); ctx.fillStyle = '#5a4030'; ctx.fillRect(x + 5, y - 9, 2, 2); }
-    // the cat asleep on the crates, tail flicking
-    const cat = sprite(CAT_CURL[Math.floor(clock * 0.7) % 2], { h: '#d08a3a' }); ctx.drawImage(cat, 473, G0 - 22 - cat.height);
-    ctx.fillStyle = '#e8b04a'; ctx.fillRect(477, G0 - 26, 1, 1);
+    // Hesper behind the counter, chopping; she turns to face you
+    const frame = G.reduceMotion ? 0 : Math.floor(clock * 2) % 2, x = 282, y = G0 - 10, dir = facing(x, p, others);
+    drawFigure(ctx, x, y, { ...KEEPERS.hesper, dir, arm: frame });
+    const hx = x + dir * 6;
+    ctx.fillStyle = '#b8bcc0'; if (frame) { ctx.fillRect(hx - 1, y - 37, 3, 7); ctx.fillStyle = '#5a4030'; ctx.fillRect(hx - 1, y - 30, 2, 2); } else { ctx.fillRect(hx - 1, y - 20, 3, 7); ctx.fillStyle = '#5a4030'; ctx.fillRect(hx - 1, y - 22, 2, 2); }
+    drawCat(ctx, 470, G0 - 26, '#d08a3a', Math.floor(clock * 0.7) % 2);
   } else {
-    // fish on the ice: the last catch sold, biggest first
     const slab = state.empire.slab || [];
     slab.forEach((f, i) => { const spec = FISH_BY_ID[f.id]; if (!spec) return; const len = clamp(6 + Math.sqrt(f.weight) * 5, 6, 22); drawFishShape(ctx, L.slab.x + 2 + i * 18, L.slab.y - 2, len, spec.color, 1); });
-    ctx.fillStyle = '#d98aa0'; ctx.fillRect(306, G0 - 16, 5, 3); ctx.fillRect(314, G0 - 16, 4, 3); ctx.fillStyle = '#e8e2d2'; ctx.fillRect(312, G0 - 15, 1, 2);
-    if (p.hold.length) { const f = p.hold[0]; drawFishShape(ctx, 374, G0 - 21, 6, FISH_BY_ID[f.id]?.color || '#8ab4c8', 1); }
+    ctx.fillStyle = '#d98aa0'; ctx.fillRect(306, G0 - 22, 5, 3); ctx.fillRect(314, G0 - 22, 4, 3); ctx.fillStyle = '#e8e2d2'; ctx.fillRect(312, G0 - 21, 1, 2);
+    if (p.hold.length) { const f = p.hold[0]; drawFishShape(ctx, 374, G0 - 27, 6, FISH_BY_ID[f.id]?.color || '#8ab4c8', 1); }
   }
 }
 const ROD_COL = ['#c9b28a', '#e8e2d2', '#2d3038', '#8ab4c8'], LINE_COL = ['#e8e2d2', '#a8c8e0', '#5a8a44', '#c8ccd4'];
-function liveTackle(G, state, p, L, layer, ctx, clock) {
+function liveTackle(G, state, p, L, layer, ctx, clock, sleeping, others) {
   const e = state.empire;
   if (layer !== 'back') return;
-  // rods in the rack; you own tiers up to e.rod, the next one wears a price tag
   for (let i = 0; i < 4; i++) {
     const rx = L.rack.x + i * L.rack.step, owned = i <= e.rod, col = owned ? ROD_COL[i] : scale(ROD_COL[i], 0.7);
     ctx.fillStyle = col; ctx.fillRect(rx, L.rack.top, 1, L.rack.bottom - L.rack.top); ctx.fillStyle = scale(col, 1.2); ctx.fillRect(rx, L.rack.top, 1, 2);
@@ -657,14 +650,12 @@ function liveTackle(G, state, p, L, layer, ctx, clock) {
     else if (i === e.rod + 1) { ctx.fillStyle = '#f2c14e'; ctx.fillRect(rx - 11, L.rack.tag - 2, 22, 10); text(ctx, `${GEAR.rod[i].price}`, rx, L.rack.tag, { color: '#2a1a10', align: 'center', shadow: false }); }
     else text(ctx, `${GEAR.rod[i].price}`, rx, L.rack.tag, { color: '#a89a7c', align: 'center', shadow: false });
   }
-  // line spools on the shelf under the window
   for (let i = 0; i < 4; i++) {
     const sx = L.spools.x + i * L.spools.step, owned = i <= e.line, col = owned ? LINE_COL[i] : scale(LINE_COL[i], 0.55);
     ctx.fillStyle = '#5a4030'; ctx.fillRect(sx, L.spools.y - 10, 12, 10); ctx.fillStyle = col; ctx.fillRect(sx + 1, L.spools.y - 8, 10, 6); ctx.fillStyle = scale(col, 0.7); for (let k = 0; k < 3; k++) ctx.fillRect(sx + 1, L.spools.y - 7 + k * 2, 10, 1);
     if (i === e.line) { ctx.fillStyle = '#8fd47f'; ctx.fillRect(sx + 4, L.spools.y - 14, 4, 2); }
     else if (i === e.line + 1) { ctx.fillStyle = '#f2c14e'; ctx.fillRect(sx + 4, L.spools.y - 14, 4, 2); }
   }
-  // bait on the pegboard: worms tub, grub jar, minnow bag, the glow lure
   for (let i = 0; i < 4; i++) {
     const bx = L.pegs.x + i * L.pegs.step, by = L.pegs.y + 8, cur = e.bait === i && (i === 0 || e.baitCount > 0);
     ctx.fillStyle = '#3a3a3c'; ctx.fillRect(bx + 4, by - 6, 1, 4);
@@ -674,29 +665,26 @@ function liveTackle(G, state, p, L, layer, ctx, clock) {
     else { ctx.fillStyle = '#3a3a3c'; ctx.fillRect(bx + 4, by - 2, 2, 4); ctx.fillStyle = `rgba(120,255,160,${0.6 + 0.4 * Math.sin(clock * 4)})`; ctx.fillRect(bx + 3, by + 2, 4, 6); ctx.fillStyle = '#e8ffe8'; ctx.fillRect(bx + 4, by + 3, 2, 2); }
     if (cur) { ctx.fillStyle = '#8fd47f'; ctx.fillRect(bx + 3, by + 12, 4, 2); if (i > 0) text(ctx, `x${e.baitCount}`, bx + 5, by + 16, { color: '#8fd47f', align: 'center', shadow: false }); }
   }
-  // trophy: the biggest fish anyone has landed
   const best = e.best, spec = best && FISH.find(f => f.name === best.name);
   if (spec) { const len = clamp(14 + Math.sqrt(best.weight) * 9, 14, 64); drawFishShape(ctx, L.trophy.x - len / 2, L.trophy.y - 4, len, spec.color, 1); text(ctx, `${best.weight} kg  ${best.by}`, L.trophy.x, L.trophy.y + 3, { color: '#c9b28a', align: 'center', shadow: false }); }
   else text(ctx, 'your fish here', L.trophy.x, L.trophy.y - 3, { color: '#7a6a4c', align: 'center', shadow: false });
-  // calendar
   text(ctx, SEASON_NAMES[G.season].slice(0, 3).toUpperCase(), L.calendar.x, L.calendar.y, { color: '#e8e2d2', align: 'center', shadow: false });
   text(ctx, `${dayOfSeason(state.time.day)}`, L.calendar.x, L.calendar.y + 10, { color: '#3a2a1c', align: 'center', shadow: false, scale: 2 });
   // Ansel at the vise under his magnifier
-  const pal = { t: '#5a4030', h: '#8a7a5c', s: '#e6c3a0', e: '#1a1712', c: '#5a6a3a', a: '#5a6a3a', d: '#4a3324', b: '#1a1720' };
-  const frame = G.reduceMotion ? 0 : Math.floor(clock * 1.4) % 2, x = 318, y = G0 - 8;
-  person(ctx, frame ? HAT_B : HAT_A, pal, x, y);
-  ctx.fillStyle = '#e0685a'; ctx.fillRect(x + (frame ? 5 : 4), y - (frame ? 21 : 10), 1, 2);
+  const frame = G.reduceMotion ? 0 : Math.floor(clock * 1.4) % 2, x = 318, y = G0 - 10, dir = facing(x, p, others);
+  drawFigure(ctx, x, y, { ...KEEPERS.ansel, dir, arm: frame });
+  ctx.fillStyle = '#e0685a'; ctx.fillRect(x + dir * 6, y - (frame ? 31 : 13), 1, 2);
 }
-function liveBoatyard(G, state, p, L, layer, ctx, clock) {
+function liveBoatyard(G, state, p, L, layer, ctx, clock, sleeping, others) {
   const e = state.empire;
   if (layer === 'back') {
     const s = L.storage, own = e.storage, tint = i => i <= own ? 1 : 0.6;
-    ctx.fillStyle = scale('#8a8a80', tint(0)); ctx.fillRect(s.x, s.y - 9, 9, 9); ctx.fillStyle = scale('#b8b8b0', tint(0)); ctx.fillRect(s.x + 1, s.y - 9, 1, 9);
-    ctx.fillStyle = scale('#3d6b8a', tint(1)); ctx.fillRect(s.x + 14, s.y - 12, 22, 12); ctx.fillStyle = scale('#e8e2d2', tint(1)); ctx.fillRect(s.x + 14, s.y - 13, 22, 3);
-    ctx.fillStyle = scale('#e8e2d2', tint(2)); ctx.fillRect(s.x + 40, s.y - 18, 26, 18); ctx.fillStyle = scale('#8ab4c8', tint(2)); ctx.fillRect(s.x + 42, s.y - 16, 22, 2); ctx.fillStyle = '#3a3a3c'; ctx.fillRect(s.x + 51, s.y - 12, 4, 1);
-    ctx.fillStyle = scale('#5a4030', tint(3)); ctx.fillRect(s.x + 14, s.y - 34, 52, 16); ctx.fillStyle = scale('#7a5a3a', tint(3)); for (let k = 0; k < 3; k++) ctx.fillRect(s.x + 15, s.y - 33 + k * 5, 50, 1); ctx.fillStyle = scale('#2d3038', tint(3)); ctx.fillRect(s.x + 36, s.y - 28, 8, 3);
-    for (let i = 0; i < 4; i++) { const px = [s.x + 4, s.x + 25, s.x + 53, s.x + 40][i], py = [s.y - 13, s.y - 17, s.y - 22, s.y - 38][i]; ctx.fillStyle = i <= own ? '#8fd47f' : i === own + 1 ? '#f2c14e' : '#5d6260'; ctx.fillRect(px, py, 3, 2); }
-    text(ctx, 'HOLDS', s.x + 34, s.y - 48, { color: '#e8b04a', align: 'center', shadow: '#1a1a1c' });
+    ctx.fillStyle = scale('#8a8a80', tint(0)); ctx.fillRect(s.x, s.y - 12, 11, 12); ctx.fillStyle = scale('#b8b8b0', tint(0)); ctx.fillRect(s.x + 1, s.y - 12, 1, 12);
+    ctx.fillStyle = scale('#3d6b8a', tint(1)); ctx.fillRect(s.x + 16, s.y - 16, 26, 16); ctx.fillStyle = scale('#e8e2d2', tint(1)); ctx.fillRect(s.x + 16, s.y - 18, 26, 3);
+    ctx.fillStyle = scale('#e8e2d2', tint(2)); ctx.fillRect(s.x + 46, s.y - 24, 30, 24); ctx.fillStyle = scale('#8ab4c8', tint(2)); ctx.fillRect(s.x + 48, s.y - 22, 26, 3); ctx.fillStyle = '#3a3a3c'; ctx.fillRect(s.x + 58, s.y - 15, 5, 1);
+    ctx.fillStyle = scale('#5a4030', tint(3)); ctx.fillRect(s.x + 16, s.y - 42, 60, 22); ctx.fillStyle = scale('#7a5a3a', tint(3)); for (let k = 0; k < 3; k++) ctx.fillRect(s.x + 17, s.y - 41 + k * 7, 58, 1); ctx.fillStyle = scale('#2d3038', tint(3)); ctx.fillRect(s.x + 42, s.y - 34, 9, 3);
+    for (let i = 0; i < 4; i++) { const px = [s.x + 4, s.x + 28, s.x + 60, s.x + 46][i], py = [s.y - 16, s.y - 22, s.y - 28, s.y - 46][i]; ctx.fillStyle = i <= own ? '#8fd47f' : i === own + 1 ? '#f2c14e' : '#5d6260'; ctx.fillRect(px, py, 3, 2); }
+    text(ctx, 'HOLDS', s.x + 40, s.y - 54, { color: '#e8b04a', align: 'center', shadow: '#1a1a1c' });
     const en = e.engine, E = L.engines;
     const slots = [[E.x + 6, E.y1], [E.x + 44, E.y1], [E.x + 6, E.y2], [E.x + 44, E.y2]];
     slots.forEach(([ex, ey], i) => {
@@ -706,89 +694,81 @@ function liveBoatyard(G, state, p, L, layer, ctx, clock) {
       ctx.fillStyle = i <= en ? '#8fd47f' : i === en + 1 ? '#f2c14e' : '#5d6260'; ctx.fillRect(ex + 26, ey - 32, 3, 2);
       if (i === en + 1) text(ctx, `${GEAR.engine[i].price}`, ex + 12, ey - 40, { color: '#f2c14e', align: 'center', shadow: '#1a1a1c' });
     });
-    const gull = sprite(GULL[0], { w: '#e8e2d2', o: '#e8b04a', y: '#e8b04a' }); ctx.drawImage(gull, 560, G0 - 6 - gull.height);
-    ctx.fillStyle = Math.sin(clock * 0.7) > 0.95 ? '#e8e2d2' : '#1a1712'; ctx.fillRect(566, G0 - 11, 1, 1);
+    drawGull(ctx, 558, G0 - 4, Math.sin(clock * 0.7) > 0.95);
   } else {
     // the hull on the trestles: whatever boat the crew owns
-    const tier = e.boat, len = GEAR.boat[tier].len * 4, hx = 240 - len / 2, hy = G0 - 13;
+    const tier = e.boat, len = GEAR.boat[tier].len * 4, hx = 240 - len / 2, hy = G0 - 19;
     const cols = ['#6e4a32', '#e8e2d2', '#3d6b8a', '#3a5a44'][tier], trim = ['#a8825a', '#3d6b8a', '#e8e2d2', '#e8b04a'][tier];
-    for (let i = 0; i < 11; i++) { const inset = R((i * i) / 8); ctx.fillStyle = i < 2 ? trim : i % 3 ? cols : scale(cols, 0.85); ctx.fillRect(R(hx + inset), hy - 12 + i, R(len - inset * 2), 1); }
+    for (let i = 0; i < 13; i++) { const inset = R((i * i) / 9); ctx.fillStyle = i < 2 ? trim : i % 3 ? cols : scale(cols, 0.85); ctx.fillRect(R(hx + inset), hy - 14 + i, R(len - inset * 2), 1); }
     ctx.fillStyle = scale(cols, 0.55); ctx.fillRect(R(hx + 8), hy - 2, R(len - 16), 2);
-    if (tier >= 2) { ctx.fillStyle = tier === 2 ? '#c9b28a' : '#e8e2d2'; ctx.fillRect(R(hx + len * 0.55), hy - 24, R(len * 0.3), 12); ctx.fillStyle = '#2c3f50'; ctx.fillRect(R(hx + len * 0.58), hy - 22, 6, 5); ctx.fillRect(R(hx + len * 0.7), hy - 22, 6, 5); }
-    if (tier === 3) { ctx.fillStyle = '#5a4030'; ctx.fillRect(R(hx + len * 0.4), hy - 46, 2, 34); ctx.fillRect(R(hx + len * 0.3), hy - 40, R(len * 0.24), 1); ctx.fillStyle = '#e0685a'; ctx.fillRect(R(hx + len * 0.9), hy - 20, 3, 5); }
-    ctx.fillStyle = '#e8e2d2'; ctx.fillRect(R(hx + 4), hy - 36, 8, 10); ctx.fillStyle = '#3a3a3c'; ctx.fillRect(R(hx + 7), hy - 38, 2, 3); ctx.fillStyle = '#8a8a80'; ctx.fillRect(R(hx + 6), hy - 33, 4, 1); ctx.fillRect(R(hx + 6), hy - 31, 4, 1); ctx.fillRect(R(hx + 6), hy - 29, 3, 1);
+    if (tier >= 2) { ctx.fillStyle = tier === 2 ? '#c9b28a' : '#e8e2d2'; ctx.fillRect(R(hx + len * 0.55), hy - 28, R(len * 0.3), 14); ctx.fillStyle = '#2c3f50'; ctx.fillRect(R(hx + len * 0.58), hy - 26, 6, 5); ctx.fillRect(R(hx + len * 0.7), hy - 26, 6, 5); }
+    if (tier === 3) { ctx.fillStyle = '#5a4030'; ctx.fillRect(R(hx + len * 0.4), hy - 52, 2, 38); ctx.fillRect(R(hx + len * 0.3), hy - 46, R(len * 0.24), 1); ctx.fillStyle = '#e0685a'; ctx.fillRect(R(hx + len * 0.9), hy - 24, 3, 5); }
+    ctx.fillStyle = '#e8e2d2'; ctx.fillRect(R(hx + 4), hy - 42, 8, 10); ctx.fillStyle = '#3a3a3c'; ctx.fillRect(R(hx + 7), hy - 44, 2, 3); ctx.fillStyle = '#8a8a80'; ctx.fillRect(R(hx + 6), hy - 39, 4, 1); ctx.fillRect(R(hx + 6), hy - 37, 4, 1); ctx.fillRect(R(hx + 6), hy - 35, 3, 1);
     // Dov sanding the stern; sawdust falls
-    const pal = { t: '#e8b04a', h: '#3a2a1c', s: '#c9956a', e: '#1a1712', c: '#3d6b8a', a: '#3d6b8a', d: '#4a4744', b: '#1a1720' };
-    const frame = G.reduceMotion ? 0 : Math.floor(clock * 3.2) % 2, x = 356, y = G0;
-    shadow(ctx, x, y, 6);
-    person(ctx, frame ? HAT_B : HAT_A, pal, x, y, true);
-    ctx.fillStyle = '#c9b28a'; ctx.fillRect(x - (frame ? 9 : 7), y - (frame ? 20 : 9), 5, 3);
-    if (!G.reduceMotion) { ctx.fillStyle = '#e0d0a0'; for (let i = 0; i < 4; i++) { const t = (clock * 0.9 + i * 0.25) % 1; ctx.fillRect(R(x - 10 - t * 6 + Math.sin(t * 9 + i) * 2), R(y - 14 + t * 14), 1, 1); } }
+    const frame = G.reduceMotion ? 0 : Math.floor(clock * 3.2) % 2, x = 356 - frame, y = G0;
+    shadow(ctx, x, y, 9);
+    drawFigure(ctx, x, y, { ...KEEPERS.dov, dir: -1, arm: 2 });
+    ctx.fillStyle = '#c9b28a'; ctx.fillRect(x - 15, y - 21, 6, 4);
+    if (!G.reduceMotion) { ctx.fillStyle = '#e0d0a0'; for (let i = 0; i < 4; i++) { const t = (clock * 0.9 + i * 0.25) % 1; ctx.fillRect(R(x - 14 - t * 6 + Math.sin(t * 9 + i) * 2), R(y - 18 + t * 18), 1, 1); } }
   }
 }
 function liveHouse1(G, state, p, L, layer, ctx, clock, sleeping) {
   if (layer !== 'back') return;
-  const pal = { h: '#d8d0bc', s: '#e6c3a0', e: '#1a1712', c: '#8a5a7a', d: '#5a4a4a', b: '#3a2a1c' };
   const rock = G.reduceMotion ? 0 : Math.sin(clock * 2.2);
-  const cx = L.chair.x - 6, cy = G0 - R(rock);
-  ctx.fillStyle = '#6a4a30'; ctx.fillRect(cx - 4, G0 - 2, 26, 2); ctx.fillRect(cx - 2, cy - 20, 3, 20); ctx.fillRect(cx + 12, cy - 8, 3, 8); ctx.fillRect(cx - 2, cy - 9, 16, 3); ctx.fillStyle = '#8a6a44'; ctx.fillRect(cx, cy - 18, 1, 10); ctx.fillRect(cx + 2, cy - 17, 1, 9);
+  const cx = L.chair.x - 8, cy = G0 - R(rock);
+  ctx.fillStyle = '#6a4a30'; ctx.fillRect(cx - 6, G0 - 2, 34, 2); ctx.fillRect(cx - 2, cy - 32, 3, 32); ctx.fillRect(cx + 16, cy - 12, 3, 12); ctx.fillRect(cx - 2, cy - 13, 22, 3);
+  ctx.fillStyle = '#8a6a44'; ctx.fillRect(cx, cy - 30, 1, 17); ctx.fillRect(cx + 2, cy - 29, 1, 16); ctx.fillRect(cx + 4, cy - 28, 1, 15);
   if (!sleeping) {
     const frame = Math.floor(clock * 2.5) % 2;
-    person(ctx, frame ? SIT_B : SIT_A, pal, L.chair.x, cy);
-    ctx.fillStyle = '#c46a6a'; ctx.fillRect(L.chair.x + 1, cy - 9, 5, 4); ctx.fillStyle = '#8a8a80'; ctx.fillRect(L.chair.x + 4 + frame, cy - 12 - frame, 1, 4); ctx.fillRect(L.chair.x + 7, cy - 11, 1, 3);
-    ctx.fillStyle = '#c46a6a'; ctx.fillRect(L.chair.x - 14, G0 - 5, 5, 3); for (let i = 0; i < 6; i++) ctx.fillRect(L.chair.x - 10 + (i >> 1), G0 - 5 - (i % 2), 1, 1);
-    const cat = sprite(CAT_CURL[Math.floor(clock * 0.8) % 2], { h: '#8a7a6a' }); ctx.drawImage(cat, 300, G0 - cat.height);
+    drawSeated(ctx, L.chair.x, cy, { ...KEEPERS.marla, dir: 1, arm: 1 });
+    ctx.fillStyle = '#c46a6a'; ctx.fillRect(L.chair.x + 2, cy - 15, 7, 4); ctx.fillStyle = '#8a8a80'; ctx.fillRect(L.chair.x + 5 + frame, cy - 19 - frame, 1, 5); ctx.fillRect(L.chair.x + 9, cy - 18, 1, 4);
+    ctx.fillStyle = '#c46a6a'; ctx.fillRect(L.chair.x - 16, G0 - 6, 6, 4); for (let i = 0; i < 8; i++) ctx.fillRect(L.chair.x - 10 + (i >> 1), G0 - 6 - (i % 2), 1, 1);
+    drawCat(ctx, 338, G0, '#8a7a6a', Math.floor(clock * 0.8) % 2);
   } else {
-    ctx.fillStyle = '#d8d0bc'; ctx.fillRect(445, G0 - 15, 6, 4); ctx.fillStyle = '#e6c3a0'; ctx.fillRect(451, G0 - 14, 4, 3);
-    ctx.fillStyle = '#8a3a3a'; ctx.fillRect(456, G0 - 11, 42, 2);
-    const cat = sprite(CAT_CURL[0], { h: '#8a7a6a' }); ctx.drawImage(cat, 486, G0 - 10 - cat.height);
-    bubbleZ(ctx, 455, G0 - 18, clock);
+    drawSleeper(ctx, 442, G0 - 17, { ...KEEPERS.marla, hair: 'bun' });
+    ctx.fillStyle = '#8a3a3a'; ctx.fillRect(452, G0 - 13, 46, 4); ctx.fillStyle = '#d8c48a'; ctx.fillRect(452, G0 - 13, 46, 1);
+    drawCat(ctx, 484, G0 - 12, '#8a7a6a', 0);
+    bubbleZ(ctx, 452, G0 - 22, clock);
   }
 }
 function liveHouse2(G, state, p, L, layer, ctx, clock, sleeping) {
-  const pal = { h: '#1a1712', s: '#7a4a2a', e: '#0a0806', c: '#c46a5a', d: '#3d4a54', b: '#1a1720' };
   if (layer === 'back') {
     const page = !sleeping && !G.reduceMotion && (clock % 3.2) < 0.35;
-    person(ctx, page ? SIT_B : SIT_A, pal, L.desk.x - 12, G0 - 2);
-    if (sleeping) bubbleZ(ctx, L.desk.x - 8, G0 - 18, clock);
-    const adaPal = { h: '#2a1a10', s: '#8a5a3a', e: '#0a0806', c: '#e8b04a', d: '#5a4a4a', b: '#3a2a1c' };
-    if (!sleeping) { person(ctx, SIT_A, adaPal, 424, G0 - 2, true); ctx.fillStyle = '#e8e2d2'; ctx.fillRect(413, G0 - 15, 5, 4); ctx.fillStyle = '#3a2a1c'; ctx.fillRect(413, G0 - 15, 5, 1); if (Math.sin(clock * 0.6) > 0.7) { ctx.fillStyle = '#e8e2d2'; ctx.fillRect(412, G0 - 17, 2, 2); } }
+    drawSeated(ctx, L.desk.x - 14, G0 - 2, { ...KEEPERS.tunde, dir: 1, arm: page ? 0 : 1 });
+    if (sleeping) bubbleZ(ctx, L.desk.x - 8, G0 - 30, clock);
+    if (!sleeping) { drawSeated(ctx, 426, G0 - 2, { ...KEEPERS.ada, dir: -1, arm: 1 }); ctx.fillStyle = '#e8e2d2'; ctx.fillRect(416, G0 - 20, 6, 5); ctx.fillStyle = '#3a2a1c'; ctx.fillRect(416, G0 - 20, 6, 1); if (Math.sin(clock * 0.6) > 0.7) { ctx.fillStyle = '#e8e2d2'; ctx.fillRect(414, G0 - 23, 2, 2); } }
   } else {
-    ctx.fillStyle = '#e8e2d2'; ctx.fillRect(266, G0 - 13, 18, 3); ctx.fillStyle = '#3a2a1c'; ctx.fillRect(274, G0 - 13, 1, 3); ctx.fillStyle = '#8a8a80'; ctx.fillRect(268, G0 - 12, 5, 1); ctx.fillRect(277, G0 - 12, 5, 1);
-    if (!sleeping) smokePuff(ctx, 300, G0 - 15, clock, 2, 'rgba(230,230,235,');
+    ctx.fillStyle = '#e8e2d2'; ctx.fillRect(264, G0 - 20, 20, 4); ctx.fillStyle = '#3a2a1c'; ctx.fillRect(273, G0 - 20, 1, 4); ctx.fillStyle = '#8a8a80'; ctx.fillRect(266, G0 - 19, 6, 1); ctx.fillRect(276, G0 - 19, 6, 1); ctx.fillRect(266, G0 - 17, 5, 1);
+    if (!sleeping) smokePuff(ctx, 300, G0 - 21, clock, 2, 'rgba(230,230,235,');
   }
 }
 function liveHouse3(G, state, p, L, layer, ctx, clock, sleeping) {
   if (layer !== 'back') return;
-  const pal = { h: '#d8d0bc', s: '#c9956a', e: '#1a1712', c: '#3d6b5a', d: '#4a3324', b: '#1a1720' };
   const x = L.chair.x + 2;
-  person(ctx, SIT_A, pal, x, G0 - 2);
-  ctx.fillStyle = '#d8d0bc'; ctx.fillRect(x - 3, G0 - 12, 5, 3);
-  if (!sleeping) { ctx.fillStyle = '#3a2a1c'; ctx.fillRect(x + 1, G0 - 12, 4, 1); ctx.fillRect(x + 4, G0 - 13, 2, 2); if (!G.reduceMotion) smokePuff(ctx, x + 5, G0 - 15, clock, 3); }
-  else bubbleZ(ctx, x + 2, G0 - 18, clock);
-  const dog = sprite(DOG[Math.floor(clock * 0.9) % 2], { h: '#8a6a44', e: '#1a1712' }); ctx.drawImage(dog, 292, G0 - dog.height);
+  drawSeated(ctx, x, G0 - 2, { ...KEEPERS.bram, dir: 1, arm: 0 });
+  if (!sleeping) { ctx.fillStyle = '#3a2a1c'; ctx.fillRect(x + 4, G0 - 26, 5, 1); ctx.fillRect(x + 8, G0 - 28, 2, 3); if (!G.reduceMotion) smokePuff(ctx, x + 9, G0 - 30, clock, 3); }
+  else bubbleZ(ctx, x + 4, G0 - 32, clock);
+  drawDog(ctx, 288, G0, '#8a6a44', Math.floor(clock * 0.9) % 2);
   const b = L.barometer, ang = { clear: 0.35, overcast: 0, rain: -0.4, storm: -0.9, fog: -0.1, snow: -0.3 }[G.wx.kind] || 0;
   ctx.fillStyle = '#e0685a'; ctx.fillRect(R(b.x + Math.sin(ang) * 2), R(b.y - Math.cos(ang) * 2), 1, 1); ctx.fillRect(b.x, b.y, 1, 1);
 }
 function liveHouse4(G, state, p, L, layer, ctx, clock, sleeping) {
-  const elena = { h: '#2a1a10', s: '#c9956a', e: '#1a1712', c: '#5a8a44', d: '#5a4a4a', b: '#3a2a1c' };
-  const nico = { h: '#2a1a10', s: '#d8a880', e: '#1a1712', c: '#e0685a', d: '#5a6a8a', b: '#3a2a1c' };
   if (layer === 'back') {
     if (!sleeping) {
       const frame = G.reduceMotion ? 0 : Math.floor(clock * 4) % 2;
-      person(ctx, frame ? SIT_B : SIT_A, elena, L.table.x - 26, G0 - 2);
+      drawSeated(ctx, L.table.x - 28, G0 - 2, { ...KEEPERS.elena, dir: 1, arm: 1 });
       const kf = Math.floor(clock * 1.6) % 2;
-      person(ctx, kf ? KID_B : KID_A, nico, 246, G0);
-      ctx.fillStyle = '#5c4030'; ctx.fillRect(252 + kf * 2, G0 - 3, 8, 3); ctx.fillStyle = '#e8e2d2'; ctx.fillRect(255 + kf * 2, G0 - 7, 3, 4);
+      drawKid(ctx, 246, G0, { ...KEEPERS.nico, dir: 1, arm: kf, moving: false });
+      ctx.fillStyle = '#5c4030'; ctx.fillRect(256 + kf * 2, G0 - 4, 10, 4); ctx.fillStyle = '#e8e2d2'; ctx.fillRect(260 + kf * 2, G0 - 9, 3, 5);
     } else {
-      ctx.fillStyle = '#2a1a10'; ctx.fillRect(408, G0 - 12, 5, 4); ctx.fillStyle = '#d8a880'; ctx.fillRect(413, G0 - 11, 3, 3); ctx.fillStyle = '#e0685a'; ctx.fillRect(418, G0 - 9, 40, 2);
-      ctx.fillStyle = '#2a1a10'; ctx.fillRect(408, G0 - 34, 6, 4); ctx.fillStyle = '#c9956a'; ctx.fillRect(414, G0 - 33, 4, 3); ctx.fillStyle = '#5a6a8a'; ctx.fillRect(420, G0 - 31, 40, 2);
-      bubbleZ(ctx, 416, G0 - 16, clock);
-      ctx.fillStyle = '#5c4030'; ctx.fillRect(388, G0 - 3, 8, 3); ctx.fillStyle = '#e8e2d2'; ctx.fillRect(391, G0 - 7, 3, 4);
+      drawSleeper(ctx, 407, G0 - 21, KEEPERS.nico); ctx.fillStyle = '#e0685a'; ctx.fillRect(418, G0 - 16, 44, 3);
+      drawSleeper(ctx, 407, G0 - 53, KEEPERS.elena); ctx.fillStyle = '#5a6a8a'; ctx.fillRect(418, G0 - 48, 44, 3);
+      bubbleZ(ctx, 416, G0 - 26, clock);
+      ctx.fillStyle = '#5c4030'; ctx.fillRect(388, G0 - 4, 10, 4); ctx.fillStyle = '#e8e2d2'; ctx.fillRect(392, G0 - 9, 3, 5);
     }
   } else if (!sleeping) {
     const frame = G.reduceMotion ? 0 : Math.floor(clock * 4) % 2;
-    ctx.fillStyle = '#7fe0c3'; ctx.fillRect(176, G0 - 11, 14 - frame, 2); ctx.fillStyle = '#e8e2d2'; ctx.fillRect(174, G0 - 22 + frame, 1, 3);
+    ctx.fillStyle = '#7fe0c3'; ctx.fillRect(176, G0 - 16, 14 - frame, 2); ctx.fillStyle = '#e8e2d2'; ctx.fillRect(174, G0 - 30 + frame, 1, 3);
   }
 }
 const LIVE = { fishmonger: liveFishmonger, tackle: liveTackle, boatyard: liveBoatyard, house1: liveHouse1, house2: liveHouse2, house3: liveHouse3, house4: liveHouse4 };
@@ -819,9 +799,9 @@ export function drawRoom(G, state, p, cam, vw, vh, others = []) {
   for (const l of L.lamps) drawLampGlow(ctx, l, lampState(G, state, l, house, sleeping) > 0, clock, reduceMotion);
   if (L.nightlight && sleeping) { ctx.fillStyle = '#f2c14e'; ctx.fillRect(L.nightlight.x - 1, L.nightlight.y - 6, 2, 2); }
   for (const c of L.clocks) clockHands(ctx, c, state.time.minute);
-  LIVE[id](G, state, p, L, 'back', ctx, clock, sleeping);
+  LIVE[id](G, state, p, L, 'back', ctx, clock, sleeping, others);
   ctx.drawImage(B.front, 0, 0);
-  LIVE[id](G, state, p, L, 'front', ctx, clock, sleeping);
+  LIVE[id](G, state, p, L, 'front', ctx, clock, sleeping, others);
   for (const o of others) drawWalker(G, o, false);
   drawWalker(G, p);
 }
@@ -874,8 +854,8 @@ const LINES = {
     snow: ["Snow days. He's been at the window since dawn."], rain: ['He asked if fish get wet in the rain.'], sleeping: ['(the house is asleep; a nightlight glows)'],
   },
 };
-const ANCHOR = { fishmonger: [330, G0 - 32], tackle: [318, G0 - 32], boatyard: [356, G0 - 28], house1: [262, G0 - 26], house2: [264, G0 - 26], house3: [264, G0 - 26], house4: [160, G0 - 26] };
-const SLEEP_ANCHOR = { house1: [452, G0 - 24], house2: [264, G0 - 26], house3: [264, G0 - 26], house4: [416, G0 - 42] };
+const ANCHOR = { fishmonger: [282, G0 - 48], tackle: [318, G0 - 48], boatyard: [356, G0 - 40], house1: [262, G0 - 40], house2: [262, G0 - 40], house3: [266, G0 - 40], house4: [140, G0 - 40] };
+const SLEEP_ANCHOR = { house1: [446, G0 - 28], house2: [262, G0 - 40], house3: [266, G0 - 40], house4: [412, G0 - 62] };
 
 /** A greeting or reply from whoever lives here, positioned above them. */
 export function roomPopup(state, ev, clock) {

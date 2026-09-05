@@ -1,6 +1,8 @@
 // The phone UI. Renders whatever projection the host last sent; holds no rules.
 import { SEASON_NAMES, clockText } from '../shared/protocol.js';
 import { weatherLabel } from '../game/weather.js';
+import { drawFishArt } from '../shared/fishart.js';
+import { journalPage, journalTotals, list } from '../shared/journal.js';
 
 export function createController(input) {
   const $ = s => document.querySelector(s);
@@ -8,9 +10,14 @@ export function createController(input) {
     root: $('#controller'), name: $('#ctl-name'), gold: $('#ctl-gold'), hold: $('#ctl-hold'), weather: $('#ctl-weather'),
     prompt: $('#ctl-prompt'), reel: $('#ctl-reel'), zone: $('#reel-zone'), fish: $('#reel-fish'),
     prog: $('#reel-prog'), tension: $('#reel-tension'), power: $('#ctl-power'), powerFill: $('#ctl-power-fill'),
-    menu: $('#ctl-menu'), btnA: $('#btn-a'), btnB: $('#btn-b'),
+    menu: $('#ctl-menu'), btnA: $('#btn-a'), btnB: $('#btn-b'), btnJournal: $('#btn-journal'),
+    card: $('#ctl-card'), cardArt: $('#card-art'), cardName: $('#card-name'), cardMeta: $('#card-meta'), cardNew: $('#card-new'),
+    journal: $('#ctl-journal'), jPage: $('#journal-page'), jArt: $('#journal-art'), jName: $('#journal-name'), jStats: $('#journal-stats'), jInfo: $('#journal-info'), jTotals: $('#journal-totals'),
   };
-  let menuKey = '';
+  let menuKey = '', journalKey = '', cardTimer = null;
+  el.btnJournal.addEventListener('pointerdown', e => { e.preventDefault(); input.journal(); });
+  $('#journal-prev').addEventListener('pointerdown', e => { e.preventDefault(); input.step(-1); });
+  $('#journal-next').addEventListener('pointerdown', e => { e.preventDefault(); input.step(1); });
 
   function update(v) {
     el.name.textContent = v.name;
@@ -50,6 +57,43 @@ export function createController(input) {
 
     el.root.classList.toggle('menu-mode', !!v.menu);
     if (v.menu) renderMenu(v.menu); else { el.menu.hidden = true; menuKey = ''; }
+    el.btnJournal.hidden = !v.hasJournal;
+    el.btnJournal.textContent = v.journal ? 'Close' : 'Journal';
+    el.root.classList.toggle('journal-mode', !!v.journal);
+    if (v.journal) renderJournal(v.journal); else { el.journal.hidden = true; journalKey = ''; }
+    if (v.journal) el.btnA.textContent = 'Close';
+  }
+
+  function renderJournal(j) {
+    const key = `${j.idx}|${JSON.stringify(j.log)}`;
+    if (key === journalKey) return;
+    journalKey = key;
+    const page = journalPage(j.idx, j.log), tot = journalTotals(j.log), info = page.info;
+    el.journal.hidden = false;
+    el.jPage.textContent = `${page.idx + 1} / ${page.n}`;
+    const g = el.jArt.getContext('2d'); g.clearRect(0, 0, 128, 64); g.imageSmoothingEnabled = false;
+    drawFishArt(g, page.spec.id, 0, 0, 2, { silhouette: !page.caught });
+    el.jName.textContent = page.caught ? page.spec.name : '???';
+    el.jName.classList.toggle('unknown', !page.caught);
+    const stars = '*'.repeat(page.spec.tier);
+    el.jStats.textContent = page.caught
+      ? `${stars}  Caught ${page.entry.n}, best ${page.entry.best} kg, worth ${page.entry.worth} g. First: ${page.first}.`
+      : `${stars}  Not caught yet. ${page.hint}.`;
+    const rows = [['Where', list(info.zones)], ['When', `${list(info.seasons)}, ${info.time.toLowerCase()}`], ['Weather', list(info.weather)], ['Size', info.weight], ['Price', info.price], ['Fight', info.style]];
+    el.jInfo.innerHTML = '';
+    for (const [k, v] of rows) { const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = v; el.jInfo.append(dt, dd); }
+    el.jTotals.textContent = `${tot.species} of ${tot.total} species, ${tot.count} fish, ${j.earned} g earned` + (j.best ? `. Crew record: ${j.best.name} ${j.best.weight} kg (${j.best.by}).` : '.');
+  }
+
+  function showCard(d) {
+    if (!d?.id) return;
+    const g = el.cardArt.getContext('2d'); g.clearRect(0, 0, 128, 64); g.imageSmoothingEnabled = false;
+    drawFishArt(g, d.id, 0, 0, 2);
+    el.cardName.textContent = d.name; el.cardName.style.color = d.tier >= 3 ? 'var(--accent)' : '';
+    el.cardMeta.textContent = `${d.weight} kg, ${d.price} g`;
+    el.cardNew.hidden = !d.isNew;
+    el.card.hidden = false;
+    clearTimeout(cardTimer); cardTimer = setTimeout(() => { el.card.hidden = true; }, 3400);
   }
 
   function renderMenu(m) {
@@ -80,7 +124,8 @@ export function createController(input) {
       case 'pullhit': b(25); break;
       case 'pullmiss': b(80); break;
       case 'snap': b([90, 40, 90]); break;
-      case 'caught': b(data?.tier >= 3 ? [40, 40, 40, 40, 120] : [30, 30, 60]); break;
+      case 'caught': b(data?.tier >= 3 ? [40, 40, 40, 40, 120] : [30, 30, 60]); showCard(data); break;
+      case 'nojournal': b(30); break;
       case 'sold': b([20, 20, 20, 20, 20]); break;
       case 'buy': b(25); break;
       case 'nope': case 'holdfull': b(60); break;

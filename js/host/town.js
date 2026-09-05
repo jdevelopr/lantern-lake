@@ -2,6 +2,7 @@
 // offscreen canvas; sky, hills, wet ground, windows and the walker are per frame.
 import { TOWN, BUILDINGS, seasonOf } from '../game/world.js';
 import { mkCanvas, R, hash, mix, scale, disc, ellipse, dith, ditherPattern, ditherRect, text, textWidth, sprite, clamp } from './gfx.js';
+import { drawFigure } from './figure.js';
 
 const TW = TOWN.w, H = 360, G0 = TOWN.ground;
 
@@ -271,34 +272,34 @@ function drawHills(G, cam, pw, season) {
   const nightMix = 1 - eff;
   for (const [par, base, col, ph] of [[0.2, 200, mix(HILL[0], '#1c2438', nightMix * 0.85), 0.017], [0.45, 236, mix(HILL[1], '#141a2a', nightMix * 0.85), 0.031]]) {
     ctx.fillStyle = mix(col, '#7b8794', wx.sky * (0.4 - par * 0.3) + (wx.kind === 'fog' ? wx.k * 0.5 : 0));
-    for (let x = 0; x < pw; x += 2) {
-      const wxp = x + cam.x * par;
+    // Sample the ridge in the hill's own (parallax) space at fixed even columns, so the
+    // silhouette and the pines stay put while the camera slides past them.
+    const off = cam.x * par, x0 = Math.floor(off / 2) * 2;
+    for (let wxp = x0; wxp < off + pw + 2; wxp += 2) {
       const hgt = 30 + Math.sin(wxp * ph) * 18 + Math.sin(wxp * ph * 2.7) * 9 + Math.sin(wxp * 0.11) * 3;
-      ctx.fillRect(R(cam.x + x), R(base - hgt), 2, R(hgt + 80));
-      // pine silhouettes along the ridge
-      if ((wxp | 0) % 9 === 0) { const t = 4 + (hash(wxp | 0, 1) * 6 | 0); for (let k = 0; k < t; k++) ctx.fillRect(R(cam.x + x) - k / 2, R(base - hgt) - t + k, k + 1, 1); }
+      const sx = R(cam.x + wxp - off), top = R(base - hgt);
+      ctx.fillRect(sx, top, 2, R(hgt + 80));
+    }
+    // pine silhouettes along the ridge, one every 9 units of hill space
+    for (let wxp = Math.floor(off / 9) * 9; wxp < off + pw + 9; wxp += 9) {
+      const hgt = 30 + Math.sin(wxp * ph) * 18 + Math.sin(wxp * ph * 2.7) * 9 + Math.sin(wxp * 0.11) * 3;
+      const sx = R(cam.x + wxp - off), top = R(base - hgt), t = 4 + (hash(wxp, 1) * 6 | 0);
+      for (let k = 0; k < t; k++) ctx.fillRect(sx - (k >> 1), top - t + k, k + 1, 1);
     }
   }
 }
 
 /* ------------------------------------------------------------ walker --- */
-const WALK = [
-  ['...hhh...', '..hhhhh..', '.hhhhhhh.', '..sssss..', '..s.s.s..', '..sssss..', '...sss...', '..ccccc..', '.ccccccc.', '.c.ccc.c.', '.c.ccc.c.', '.s.ccc.s.', '..ccccc..', '..ddddd..', '..dd.dd..', '..dd.dd..', '..dd.dd..', '..bb.bb..'],
-  ['...hhh...', '..hhhhh..', '.hhhhhhh.', '..sssss..', '..s.s.s..', '..sssss..', '...sss...', '..ccccc..', '.ccccccc.', '.c.ccc.c.', '..cccc.c.', '.s.ccc.s.', '..ccccc..', '..ddddd..', '.dd...dd.', '.dd...dd.', 'dd.....dd', 'bb.....bb'],
-  ['...hhh...', '..hhhhh..', '.hhhhhhh.', '..sssss..', '..s.s.s..', '..sssss..', '...sss...', '..ccccc..', '.ccccccc.', '.c.ccc.c.', '.c.ccc.c.', '.s.ccc.s.', '..ccccc..', '..ddddd..', '..dddd...', '..dd.dd..', '..dd.dd..', '..bb.bb..'],
-  ['...hhh...', '..hhhhh..', '.hhhhhhh.', '..sssss..', '..s.s.s..', '..sssss..', '...sss...', '..ccccc..', '.ccccccc.', '.c.ccc.c.', '.c.cccc..', '.s.ccc.s.', '..ccccc..', '..ddddd..', '.dd...dd.', '.dd...dd.', 'dd.....dd', 'bb.....bb'],
-];
+/** The player's outfit: their colour as a coat and a knit hat, dark trousers, boots. */
+export function playerPal(p) {
+  return { c: p.color, t: scale(p.color, 0.62), h: '#3a2a1c', s: '#e6c3a0', d: '#2c2a36', b: '#1a1720', w: '#e8e2d2' };
+}
 export function drawWalker(G, p, showPrompt = true) {
   const { ctx, clock } = G;
   const w = p.walk, x = R(w.x), y = G0;
-  const frame = w.moving ? [1, 0, 3, 2][Math.floor(w.t * 7) % 4] : 0;
-  const pal = { h: p.color, s: '#e6c3a0', c: scale(p.color, 0.62), d: '#2c2a36', b: '#1a1720' };
-  const spr = sprite(WALK[frame], pal, w.dir < 0);
-  ellipse(ctx, x, y, 5, 1, 'rgba(6,8,14,0.45)');
-  ctx.drawImage(spr, x - 4, y - 18);
-  // eyes
-  ctx.fillStyle = '#1a1720'; ctx.fillRect(x + (w.dir > 0 ? 1 : -2), y - 14, 1, 1);
-  if (showPrompt && p.near && !p.menu && !p.door && p.prompt) text(ctx, p.prompt, x, y - 32, { color: '#f2c14e', align: 'center' });
+  ellipse(ctx, x, y, 8, 2, 'rgba(6,8,14,0.4)');
+  drawFigure(ctx, x, y, { dir: w.dir, pal: playerPal(p), moving: w.moving, phase: Math.floor(w.t * 8), hat: 'beanie' });
+  if (showPrompt && p.near && !p.menu && !p.door && p.prompt) text(ctx, p.prompt, x, y - 46, { color: '#f2c14e', align: 'center' });
 }
 
 /* ------------------------------------------------------------- scene --- */

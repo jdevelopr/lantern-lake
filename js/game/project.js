@@ -29,5 +29,7 @@ export function project(state, seat) {
       reason: f.reason,
     } : null,
     menu: p.menu ? { shop: p.menu.shop, cursor: p.menu.cursor, items: p.menu.items } : null,
+    hasJournal: !!state.empire.journal,
+    journal: p.journal ? { idx: p.journal.idx, log: p.stats.log, best: state.empire.best, caught: p.stats.caught, earned: p.stats.earned } : null,
   };
 }

@@ -4,6 +4,11 @@
 export function mkCanvas(w, h) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+  // whole pixels only, whatever the maths upstream produced
+  const fr = g.fillRect.bind(g), di = g.drawImage.bind(g);
+  const box = (x, y, ww, hh) => { const x0 = Math.round(x), y0 = Math.round(y); return [x0, y0, Math.max(ww > 0 ? 1 : 0, Math.round(x + ww) - x0), Math.max(hh > 0 ? 1 : 0, Math.round(y + hh) - y0)]; };
+  g.fillRect = (x, y, ww, hh) => fr(...box(x, y, ww, hh));
+  g.drawImage = (...a) => { if (a.length === 3) di(a[0], Math.round(a[1]), Math.round(a[2])); else if (a.length === 5) di(a[0], Math.round(a[1]), Math.round(a[2]), Math.round(a[3]), Math.round(a[4])); else di(...a); };
   return [c, g];
 }
 
@@ -75,12 +80,13 @@ export function ellipse(c, x, y, rx, ry, color) {
 /* ----------------------------------------------------------- lights --- */
 const lightCache = new Map();
 /**
- * A smooth radial light sprite: bright core, soft falloff to nothing at r.
- * Draw it with 'lighter' onto the light map. Cached per (r, colour, core).
+ * A radial light sprite in flat bands: the falloff is posterized into `steps` rings with
+ * hard edges, so a pool of light is pixel art like everything under it.
+ * Draw it with 'lighter' onto the light map. Cached per (r, colour, steps, core).
  */
 export function lightSprite(r, color, steps = 5, core = 0.9) {
   r = R(r);
-  const key = `${r}|${color}|${core}`;
+  const key = `${r}|${color}|${steps}|${core}`;
   let c = lightCache.get(key);
   if (c) return c;
   const size = r * 2 + 3;
@@ -91,7 +97,7 @@ export function lightSprite(r, color, steps = 5, core = 0.9) {
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
     const dd = Math.hypot(x - cx, y - cy) / r;
     if (dd > 1) continue;
-    const lvl = (1 - dd) ** 1.6 * core;
+    const f = (1 - dd) ** 1.6 * core, lvl = Math.ceil(f * steps) / steps * core;
     const i = (y * size + x) * 4;
     d[i] = cr * lvl; d[i + 1] = cg * lvl; d[i + 2] = cb * lvl; d[i + 3] = 255;
   }

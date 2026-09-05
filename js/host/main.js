@@ -276,8 +276,8 @@ function drainEvents() {
     else sfx(ev.n);
     if (mode === 'multi' && ev.seat !== undefined) {
       const { seat, n } = ev;
-      if (['bite', 'hooked', 'tugwarn', 'tug', 'pullhit', 'pullmiss', 'snap', 'lost', 'caught', 'sold', 'buy', 'nope', 'zone', 'holdfull'].includes(n))
-        host.sendTo(seat, { t: 'event', name: n, data: n === 'caught' ? { name: ev.fish.name, weight: ev.fish.weight, price: ev.fish.price, tier: ev.fish.tier } : n === 'sold' ? { value: ev.value } : null });
+      if (['bite', 'hooked', 'tugwarn', 'tug', 'pullhit', 'pullmiss', 'snap', 'lost', 'caught', 'sold', 'buy', 'nope', 'zone', 'holdfull', 'nojournal'].includes(n))
+        host.sendTo(seat, { t: 'event', name: n, data: n === 'caught' ? { id: ev.fish.id, name: ev.fish.name, weight: ev.fish.weight, price: ev.fish.price, tier: ev.fish.tier, isNew: !!ev.isNew } : n === 'sold' ? { value: ev.value } : null });
     }
   }
 }

@@ -9,12 +9,14 @@ engines and storage.
 
 There is also a single-player mode played on the host screen with keyboard and mouse.
 
-The look is clean pixel art: a 640x360 canvas drawn entirely in code (no image files),
-lit by a light map that keeps the scene readable at every hour, with smooth warm pools
-from lanterns, windows and stoves, and reflections on wet ground and water. Text on the
-canvas is a hand-drawn 5x7 bitmap font. The camera sits a quarter closer than the canvas and
-follows your boat or walker (and comes in a little further indoors); two boats share one
-view until they drift apart, then the screen splits.
+The look is clean pixel art drawn entirely in code (no image files) on a strict pixel
+grid: the canvas is a virtual resolution chosen per screen so that an integer scale fills
+it exactly (about 480 world pixels across on a 1080p TV, closer indoors), every drawing
+call is snapped to whole pixels, and the light map paints its warm pools from lanterns,
+windows and stoves in flat bands. Characters are 32 px tall, at the scale of the doors
+they walk through, and carry no black outlines; the fish illustrations do. Text on the
+canvas is a hand-drawn 5x7 bitmap font. The camera follows your boat or walker; two
+boats share one view until they drift apart, then the screen splits.
 
 **Weather** rolls in and out on its own: clear, overcast, rain, storm, fog and snow, with
 odds that depend on the season. It is part of the shared game state, so it is saved with
@@ -57,9 +59,18 @@ you have bought and tags the next one with its price, the bait pegs mark what is
 tin, the boatyard hull on the trestles is your current boat, and the fishmonger lays
 your last sale out on the ice. After ten at night the houses are asleep.
 
+**Fish and the journal:** every catch shows a card with the species' illustration, weight
+and price on the TV and on the catcher's phone. The tackle shop sells the *Fish journal*
+(350 g), after which a Journal button on the phone (J in single player) opens it from
+anywhere: one page per species with the artwork, your own count, best weight, worth and
+first catch (season, day, water and weather), plus where it lives, which seasons, day or
+night, which weather favours it, its size and price. Species you have not caught yet show
+as a silhouette with a hint. Left and right, or the phone's arrows, turn the pages; Back
+closes it.
+
 **Single player:** choose *Single player* on the host screen. WASD or arrows to move,
 Space for the big button (hold for cast and reel), E or right mouse button to pull, Esc
-to go back.
+to go back, J for the journal.
 
 **Continuing:** the host browser saves the lake every few seconds. Saved lakes are listed
 on the home screen; *Continue* reopens the room under the same code, so players can
@@ -121,13 +132,14 @@ index.html            all screens
 css/style.css         art direction for the HTML screens and the phone controller
 js/main.js            host or phone, decided by ?room=
 js/net.js             PeerJS transport (host-authoritative star)
-js/shared/            constants, gear and fish catalogue, roster widget
+js/shared/            constants, gear and fish catalogue, fish illustrations, journal text, roster widget
 js/game/              rules: world (lake shape, time), fishing, weather, reducer, projection
 js/host/              TV: loop, audio, saves, keyboard for solo mode, and the renderer:
   gfx.js                bitmap font, light sprites, dither, palette maths, vignette
   lake.js               baked terrain per season, water, boats, fishing overlays, lake lights
   town.js               baked street facades, sky and hills, wet road, walker, shop menu
   room.js               interiors: baked rooms, window weather, lamps and fires, keepers
+  figure.js             people and animals: walker, keepers, residents, sitting, sleeping
   weatherfx.js          rain, snow, fog wisps, cloud shadows
   render.js             panes, light pass, halos, particles, popups, HUD
 js/client/            phone: joystick, controller UI
