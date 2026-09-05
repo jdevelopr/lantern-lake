@@ -5,11 +5,12 @@ import { SLUG, MAX_PLAYERS, MIN_PLAYERS, INTRO_MS, SOLO_CODE, PLAYER_COLORS, SEA
 import { renderRoster } from '../shared/roster.js';
 import { initState, addPlayer, reduce, toSave, fromSave } from '../game/reduce.js';
 import { project } from '../game/project.js';
-import { seasonOf, dayOfSeason } from '../game/world.js';
+import { seasonOf, dayOfSeason, lightAt, ROOMS, BUILDING_BY_ID } from '../game/world.js';
 import { weatherLabel } from '../game/weather.js';
 import { createRenderer } from './render.js';
 import { saveGame, loadGame, deleteGame, listGames } from './save.js';
-import { sfx, unlockAudio } from './audio.js';
+import { sfx, unlockAudio, setAmbience } from './audio.js';
+import { ambienceFor } from './room.js';
 import { createLocalInput } from './input.js';
 
 const $ = s => document.querySelector(s);
@@ -221,7 +222,7 @@ function playIntro({ startsAt, day, season, players }) {
 }
 
 /* ------------------------------------------------------------ loop --- */
-let acc = 0, last = performance.now(), lastSend = 0, lastSave = 0;
+let acc = 0, last = performance.now(), lastSend = 0, lastSave = 0, lastAmb = 0;
 function loop(now) {
   requestAnimationFrame(loop);
   const dtMs = Math.min(250, now - last); last = now;
@@ -234,20 +235,27 @@ function loop(now) {
       for (const p of Object.values(state.players)) if (p.connected) host.sendTo(p.seat, { t: 'state', ...project(state, p.seat) });
     }
     if (now - lastSave > SAVE_MS) { lastSave = now; persist(); }
+    if (now - lastAmb > 250) { lastAmb = now; setAmbience(ambienceFor(state, lightAt(state.time.minute))); }
   } else {
     acc = 0;
   }
   renderer.render(state, { hidePlayers: state.phase === 'lobby', solo: mode === 'solo' });
 }
 
-// Debug hook for screenshots and tuning: LL.state, LL.renderer, LL.jump({ day, minute, weather }).
+// Debug hook for screenshots and tuning: LL.state, LL.renderer,
+// LL.jump({ day, minute, weather, loc, room }) with loc 'lake' | 'town' | 'room' and room a
+// building id ('fishmonger', 'tackle', 'boatyard', 'house1'..'house4').
 window.LL = {
   get state() { return state; }, get renderer() { return renderer; },
-  jump({ day, minute, weather, loc } = {}) {
+  jump({ day, minute, weather, loc, room } = {}) {
     if (day !== undefined) state.time.day = day;
     if (minute !== undefined) state.time.minute = minute;
     if (weather !== undefined && state.weather) { state.weather.kind = weather; state.weather.intensity = 1; state.weather.t = 600; }
-    if (loc) for (const p of Object.values(state.players)) p.loc = loc;
+    if (loc) for (const p of Object.values(state.players)) {
+      p.loc = loc; p.door = null; p.menu = null;
+      if (loc === 'room') { p.room = ROOMS[room] ? room : 'tackle'; p.walk.x = ROOMS[p.room].door + 14; p.walk.dir = 1; }
+      else p.room = null;
+    }
   },
 };
 
@@ -264,7 +272,8 @@ function drainEvents() {
     } else if (ev.n === 'newday') {
       sfx('newday');
       toast(ev.newSeason ? `${SEASON_NAMES[ev.season]} has come` : `Day ${dayOfSeason(ev.day)} of ${SEASON_NAMES[ev.season]}`);
-    } else sfx(ev.n);
+    } else if (ev.n === 'enter') sfx(BUILDING_BY_ID[ev.room]?.house ? 'knock' : 'bell');
+    else sfx(ev.n);
     if (mode === 'multi' && ev.seat !== undefined) {
       const { seat, n } = ev;
       if (['bite', 'hooked', 'tugwarn', 'tug', 'pullhit', 'pullmiss', 'snap', 'lost', 'caught', 'sold', 'buy', 'nope', 'zone', 'holdfull'].includes(n))

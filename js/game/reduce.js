@@ -1,7 +1,7 @@
 // Host-only rules. Pure over state: no DOM, no network. Randomness via rand(state).
 import { GEAR, GEAR_KEYS, gearStats, FISH_BY_ID } from '../shared/catalog.js';
 import { PLAYER_COLORS, MIN_PER_SEC, DAY_MINUTES, SEASON_DAYS } from '../shared/protocol.js';
-import { WORLD, TOWN, ROCKS, DOCK, BUILDINGS, clampToLake, nearDock, seasonOf } from './world.js';
+import { WORLD, TOWN, ROCKS, DOCK, BUILDINGS, BUILDING_BY_ID, ROOMS, clampToLake, nearDock, seasonOf } from './world.js';
 import { rand, castPower, pickFish, startReel, tickReel } from './fishing.js';
 import { initWeather, coerceWeather, tickWeather, weatherMods } from './weather.js';
 
@@ -12,6 +12,7 @@ export function initState(seed = 1) {
     empire: {
       gold: 40, rod: 0, line: 0, bait: 0, baitCount: 0, boat: 0, engine: 0, storage: 0,
       earned: 0, caught: 0, best: null, log: {},
+      slab: [],   // the last catch sold, laid out on the fishmonger's ice
     },
     weather: initWeather(),
     players: {},
@@ -24,7 +25,9 @@ const emptyInput = () => ({ x: 0, y: 0, a: false, an: 0, pull: 0, back: 0, sel: 
 export function addPlayer(state, seat, cid, name, saved = null) {
   const p = {
     seat, cid, name, color: PLAYER_COLORS[seat % PLAYER_COLORS.length], connected: true,
-    loc: 'lake',
+    loc: 'lake',          // 'lake' | 'town' | 'room'
+    room: null,           // building id while loc is 'room'
+    door: null,           // { t, done, to } while fading through a doorway
     boat: { x: DOCK.spawn.x + seat * 26, y: DOCK.spawn.y - seat * 6, vx: 0, vy: 0, heading: -Math.PI / 2 },
     walk: { x: 90, dir: 1, moving: false, t: 0 },
     fishing: null, menu: null, hold: [], prompt: '',
@@ -73,7 +76,9 @@ function tick(state, dt) {
         pulled: inp.pull !== prev.pull, back: inp.back !== prev.back,
         sel: inp.selN !== prev.selN ? inp.sel : -1,
       };
-      if (p.loc === 'lake') tickLake(state, p, edge, gear, dt);
+      if (p.door) tickDoor(state, p, dt);
+      else if (p.loc === 'lake') tickLake(state, p, edge, gear, dt);
+      else if (p.loc === 'room') tickRoom(state, p, edge, gear, dt);
       else tickTown(state, p, edge, gear, dt);
       p.prev = { ...inp };
     }
@@ -239,7 +244,7 @@ function tickTown(state, p, edge, gear, dt) {
   const b = nearestBuilding(w.x);
   p.near = b?.id || null;
   p.prompt = b ? (b.id === 'dock' ? 'Set sail' : b.label) : '';
-  p.aLabel = b ? (b.id === 'dock' ? 'Sail' : 'Enter') : 'Walk';
+  p.aLabel = b ? (b.id === 'dock' ? 'Sail' : b.house ? 'Knock' : 'Enter') : 'Walk';
   if (edge.pressA && b) {
     if (b.id === 'dock') {
       p.loc = 'lake';
@@ -247,10 +252,56 @@ function tickTown(state, p, edge, gear, dt) {
       p.boat.vx = p.boat.vy = 0; p.boat.heading = -Math.PI / 2;
       state.events.push({ n: 'sail', seat: p.seat });
     } else {
-      p.menu = { shop: b.id, cursor: 0, nav: 0, items: shopItems(state, b.id, p) };
-      state.events.push({ n: 'open', seat: p.seat });
+      const rm = ROOMS[b.id];
+      goThroughDoor(state, p, { loc: 'room', room: b.id, x: rm.door + 14, dir: 1 });
     }
   }
+}
+
+/* --------------------------------------------------------------- rooms --- */
+
+// A doorway is a short fade: input is ignored, the screen dips to black, the player
+// is moved at the midpoint, then it comes back up. `to` is applied at the midpoint.
+const DOOR_TIME = 0.9;
+function goThroughDoor(state, p, to) {
+  p.door = { t: 0, done: false, to };
+  p.menu = null; p.near = null; p.prompt = ''; p.aLabel = 'Wait';
+  p.walk.moving = false;
+  state.events.push({ n: 'door', seat: p.seat, room: to.room || p.room, entering: to.loc === 'room' });
+}
+function tickDoor(state, p, dt) {
+  const d = p.door;
+  d.t += dt;
+  if (d.t >= DOOR_TIME / 2 && !d.done) {
+    d.done = true;
+    const to = d.to;
+    p.loc = to.loc; p.room = to.loc === 'room' ? to.room : null;
+    p.walk.x = to.x; p.walk.dir = to.dir; p.walk.moving = false;
+    if (to.loc === 'room') state.events.push({ n: 'enter', seat: p.seat, room: to.room });
+  }
+  if (d.t >= DOOR_TIME) p.door = null;
+}
+
+function tickRoom(state, p, edge, gear, dt) {
+  const w = p.walk, inp = p.input, rm = ROOMS[p.room], b = BUILDING_BY_ID[p.room];
+  if (!rm) { p.loc = 'town'; p.room = null; return; }
+  if (p.menu) { tickMenu(state, p, edge, gear, dt); return; }
+  const vx = Math.abs(inp.x) > 0.2 ? Math.sign(inp.x) * Math.min(1, Math.abs(inp.x) * 1.2) * 64 : 0;
+  w.x = Math.max(rm.door - 6, Math.min(rm.w - 22, w.x + vx * dt));
+  w.moving = vx !== 0;
+  if (vx) w.dir = Math.sign(vx);
+  w.t += dt;
+  const atDoor = Math.abs(w.x - rm.door - 4) < 20, atSpot = Math.abs(w.x - rm.spot) < 26;
+  p.near = atSpot ? 'spot' : atDoor ? 'door' : null;
+  p.prompt = atSpot ? rm.spotLabel : atDoor ? 'Leave' : '';
+  p.aLabel = atSpot ? (b.house ? 'Talk' : 'Shop') : atDoor ? 'Leave' : 'Walk';
+  const leave = () => goThroughDoor(state, p, { loc: 'town', x: b.x, dir: -1 });
+  if (edge.back) return leave();
+  if (!edge.pressA) return;
+  if (atSpot) {
+    if (b.house) state.events.push({ n: 'talk', seat: p.seat, room: p.room });
+    else { p.menu = { shop: p.room, cursor: 0, nav: 0, items: shopItems(state, p.room, p) }; state.events.push({ n: 'open', seat: p.seat }); }
+  } else if (atDoor) leave();
 }
 
 /** Build the menu rows for a shop. Called on open and after every purchase. */
@@ -306,6 +357,7 @@ function tickMenu(state, p, edge, gear, dt) {
     const value = -it.price;
     e.gold += value; e.earned += value; p.stats.earned += value;
     state.events.push({ n: 'sold', seat: p.seat, value, count: p.hold.length });
+    e.slab = [...p.hold].sort((a, b) => b.weight - a.weight).slice(0, 9).map(f => ({ id: f.id, weight: f.weight }));
     p.hold = [];
   } else if (it.kind === 'buy') {
     e.gold -= it.price; e[it.key]++;

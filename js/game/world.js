@@ -27,12 +27,34 @@ export const REEDS = [
 export const DOCK = { x: 170, y: 282, r: 24, pierX: 164, pierTop: 290, pierBottom: 332, spawn: { x: 170, y: 262 } };
 
 // Town buildings along a single street. x is the door centre.
+// Shops have a facade width; houses are the filler facades in town.js (w: 0 here) whose
+// front door the walker can also use. `house` entries have a resident instead of a menu.
 export const BUILDINGS = [
   { id: 'dock',       x: 70,  w: 0,   label: 'To the lake' },
+  { id: 'house1',     x: 216, w: 0,   label: "Marla's house",   house: true },
   { id: 'fishmonger', x: 330, w: 120, label: 'Fishmonger', color: '#7f9cc0', roof: '#4d6a8f' },
+  { id: 'house2',     x: 463, w: 0,   label: 'The Okafors',     house: true },
   { id: 'tackle',     x: 560, w: 140, label: 'Tackle',     color: '#c58a5a', roof: '#8a5a3a' },
+  { id: 'house3',     x: 693, w: 0,   label: "Bram's cottage",  house: true },
   { id: 'boatyard',   x: 810, w: 160, label: 'Boatyard',   color: '#a8b4a0', roof: '#5f6f5a' },
+  { id: 'house4',     x: 939, w: 0,   label: 'The Reyes home',  house: true },
 ];
+export const BUILDING_BY_ID = Object.fromEntries(BUILDINGS.map(b => [b.id, b]));
+
+// Interiors: a side-on room per building. The floor line is the town's ground line so
+// the same walker works inside. `door` is where you appear; `spot` is the counter or the
+// resident, where the big button does something. Widths are gameplay (walk limits);
+// the renderer draws to them.
+export const ROOMS = {
+  fishmonger: { w: 512, door: 34, spot: 300, spotLabel: 'Sell fish',      ceil: 204,  keeper: 'Hesper' },
+  tackle:     { w: 512, door: 34, spot: 318, spotLabel: 'Browse tackle',  ceil: 204,  keeper: 'Ansel' },
+  boatyard:   { w: 600, door: 34, spot: 372, spotLabel: 'Browse boats',   ceil: 196,  keeper: 'Dov' },
+  house1:     { w: 512, door: 34, spot: 262, spotLabel: 'Talk to Marla',  ceil: 204, keeper: 'Marla' },
+  house2:     { w: 512, door: 34, spot: 300, spotLabel: 'Talk to Tunde',  ceil: 204, keeper: 'Tunde' },
+  house3:     { w: 512, door: 34, spot: 286, spotLabel: 'Talk to Bram',   ceil: 204, keeper: 'Bram' },
+  house4:     { w: 512, door: 34, spot: 292, spotLabel: 'Talk to Elena',  ceil: 204, keeper: 'Elena' },
+};
+export const ROOM_FLOOR = TOWN.ground;
 
 /** < 1 inside the water; ~1 at the shoreline; grows outward. Radial, so clampToLake still works. */
 export function lakeNorm(x, y) {

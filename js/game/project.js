@@ -17,7 +17,7 @@ export function project(state, seat) {
     hold: p.hold.length, cap: gear.cap,
     day: state.time.day, season: seasonOf(state.time.day), minute: Math.floor(state.time.minute),
     weather: state.weather ? { kind: state.weather.kind, k: Math.round(state.weather.intensity * 10) / 10 } : null,
-    loc: p.loc, prompt: p.prompt, aLabel: p.aLabel || 'Cast', near: p.near || null,
+    loc: p.loc, room: p.room || null, door: !!p.door, prompt: p.prompt, aLabel: p.aLabel || 'Cast', near: p.near || null,
     fishing: f ? {
       stage: f.stage, power: f.power !== undefined ? r2(f.power) : undefined,
       fpos: f.fpos !== undefined ? r2(f.fpos) : undefined, zpos: f.zpos !== undefined ? r2(f.zpos) : undefined,

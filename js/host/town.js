@@ -214,17 +214,24 @@ function bakeTown(season) {
 }
 
 /* --------------------------------------------------------------- sky --- */
-function drawSky(G, cam, pw, ph, state) {
-  const { ctx, light, wx, clock } = G;
+/** Sky gradient for the current time and weather; the rooms use it through their windows. */
+export function skyColors(G, state) {
+  const { light, wx } = G;
   const m = state.time.minute, evening = m > 720;
   const dusk = 1 - Math.abs(light * 2 - 1);
   const eff = light * (1 - wx.sky);
   let top = mix(mix('#0b1020', '#5d8fb8', eff), evening ? '#c47040' : '#d6a060', dusk * 0.6 * (1 - wx.sky));
   let hor = mix(mix('#1a2238', '#b9cbd6', eff), evening ? '#e6a05a' : '#f0c890', dusk * 0.8 * (1 - wx.sky));
   if (wx.sky > 0) { top = mix(top, '#3d4652', wx.sky * 0.7); hor = mix(hor, '#6e7883', wx.sky * 0.7); }
+  return { top, hor, eff, dusk };
+}
+
+function drawSky(G, cam, pw, ph, state) {
+  const { ctx, light, wx, clock } = G;
+  const { top, hor, eff, dusk } = skyColors(G, state);
   const bands = 9;
   for (let i = 0; i < bands; i++) {
-    const t = i / (bands - 1), y = R(cam.y + t * (G0 - 60));
+    const t = i / (bands - 1), y = R(t * (G0 - 60));
     ctx.fillStyle = mix(top, hor, t); ctx.fillRect(cam.x, y, pw, R((G0 - 60) / (bands - 1)) + 1);
     if (i < bands - 1) { ctx.fillStyle = ditherPattern(ctx, mix(top, hor, (i + 1) / (bands - 1)), 0.5); ctx.fillRect(cam.x, y + R((G0 - 60) / (bands - 1)) - 6, pw, 6); }
   }
@@ -281,7 +288,7 @@ const WALK = [
   ['...hhh...', '..hhhhh..', '.hhhhhhh.', '..sssss..', '..s.s.s..', '..sssss..', '...sss...', '..ccccc..', '.ccccccc.', '.c.ccc.c.', '.c.ccc.c.', '.s.ccc.s.', '..ccccc..', '..ddddd..', '..dddd...', '..dd.dd..', '..dd.dd..', '..bb.bb..'],
   ['...hhh...', '..hhhhh..', '.hhhhhhh.', '..sssss..', '..s.s.s..', '..sssss..', '...sss...', '..ccccc..', '.ccccccc.', '.c.ccc.c.', '.c.cccc..', '.s.ccc.s.', '..ccccc..', '..ddddd..', '.dd...dd.', '.dd...dd.', 'dd.....dd', 'bb.....bb'],
 ];
-function drawWalker(G, p) {
+export function drawWalker(G, p, showPrompt = true) {
   const { ctx, clock } = G;
   const w = p.walk, x = R(w.x), y = G0;
   const frame = w.moving ? [1, 0, 3, 2][Math.floor(w.t * 7) % 4] : 0;
@@ -291,7 +298,7 @@ function drawWalker(G, p) {
   ctx.drawImage(spr, x - 4, y - 18);
   // eyes
   ctx.fillStyle = '#1a1720'; ctx.fillRect(x + (w.dir > 0 ? 1 : -2), y - 14, 1, 1);
-  if (p.near && !p.menu) text(ctx, p.prompt, x, y - 32, { color: '#f2c14e', align: 'center' });
+  if (showPrompt && p.near && !p.menu && !p.door && p.prompt) text(ctx, p.prompt, x, y - 32, { color: '#f2c14e', align: 'center' });
 }
 
 /* ------------------------------------------------------------- scene --- */

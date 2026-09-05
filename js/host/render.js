@@ -4,16 +4,22 @@
 // Frame: scene (baked terrain + animated layers + actors) -> light map multiplied
 // on top (ambient mood + warm light pools) -> halos and weather in the air ->
 // vignette -> HUD. Split screen runs the same pass per pane.
-import { WORLD, TOWN, DOCK, lakeNorm, lightAt, seasonOf, dayOfSeason } from '../game/world.js';
+import { WORLD, TOWN, DOCK, ROOMS, lakeNorm, lightAt, seasonOf, dayOfSeason } from '../game/world.js';
 import { gearStats } from '../shared/catalog.js';
 import { SEASON_NAMES, clockText } from '../shared/protocol.js';
 import { weatherMods, weatherLabel } from '../game/weather.js';
-import { mkCanvas, R, hash, mix, scale, text, textWidth, drawLight, makeVignette, sprite } from './gfx.js';
+import { mkCanvas, R, hash, mix, scale, clamp, text, textWidth, drawLight, makeVignette, sprite } from './gfx.js';
 import { buildLakeBackground, drawWater, drawBoat, drawFishing, lakeLights, drawReflections } from './lake.js';
 import { drawTown, townLights, drawMenu } from './town.js';
+import { drawRoom, roomLights, roomPopup } from './room.js';
 import { createWeatherFx } from './weatherfx.js';
 
 const W = WORLD.w, H = WORLD.h;
+// The camera sits a quarter closer than the canvas: a pane of pw x ph pixels shows
+// pw/ZOOM x ph/ZOOM of the world, following the player's boat or walker.
+export const ZOOM = 1.25;
+// Indoors the camera comes in a little further: a room is a small place.
+export const ROOM_ZOOM = 1.6;
 
 const ICON = {
   coin: sprite(['.###.', '#.#.#', '##.##', '#.#.#', '.###.'], { '#': '#e8b04a', '.': null }),
@@ -36,6 +42,7 @@ export function createRenderer(canvas) {
   const wfx = createWeatherFx(reduceMotion);
   let bg = null, bgSeason = -1;
   let clock = 0, shake = 0, lastNow = performance.now();
+  let lakeSplit = false;      // two boats too far apart to share one view (with hysteresis)
   const ambient = [];         // seasonal drift particles
   const fx = [];              // event particles {world, x, y, vx, vy, life, color, g}
   const popups = [];          // floating text
@@ -62,23 +69,27 @@ export function createRenderer(canvas) {
   }
 
   /** Multiply the light map over a pane, then paint halos into the air. */
-  function lightPass(pane, state, lights, lightLvl, wx) {
+  function lightPass(pane, state, lights, lightLvl, wx, indoor = false) {
     const cam = pane.cam;
-    const { color, eff } = ambientColor(lightLvl, wx);
+    let { color, eff } = ambientColor(lightLvl, wx);
+    // Indoors the daylight only comes through the windows, so the base mood is dimmer
+    // and the pools (window light, lamps, stoves) carry the room.
+    if (indoor) color = mix(color, '#262a38', 0.16 + 0.3 * eff);
     const dark = 1 - eff;
     lx.globalCompositeOperation = 'source-over';
     lx.fillStyle = color; lx.fillRect(0, 0, W, H);
     lx.globalCompositeOperation = 'lighter';
     // Moonlight: a broad cool wash on clear nights
-    if (eff < 0.6 && wx.sky < 0.5) drawLight(lx, pane.w * 0.72, 30, 170, '#33456e', (0.6 - eff) * (1 - wx.sky * 2) * 0.9, 6, 0.7);
-    for (const L of lights) drawLight(lx, L.x - cam.x, L.y - cam.y, L.r, L.color, L.a * (0.22 + 0.78 * dark), 5, L.win ? 0.7 : 0.95);
+    if (!indoor && eff < 0.6 && wx.sky < 0.5) drawLight(lx, pane.vw * 0.72, 30, 170, '#33456e', (0.6 - eff) * (1 - wx.sky * 2) * 0.9, 6, 0.7);
+    for (const L of lights) drawLight(lx, L.x - cam.x, L.y - cam.y, L.r, L.color, L.a * (L.fixed ? 1 : 0.22 + 0.78 * dark), 5, L.win ? 0.7 : 0.95);
     const flash = state.weather?.flash || 0;
-    if (flash > 0) { lx.fillStyle = `rgba(210,220,255,${Math.min(1, flash) * 0.85})`; lx.fillRect(0, 0, W, H); }
+    if (flash > 0) { lx.fillStyle = `rgba(210,220,255,${Math.min(1, flash) * (indoor ? 0.5 : 0.85)})`; lx.fillRect(0, 0, W, H); }
     ctx.globalCompositeOperation = 'multiply';
     ctx.drawImage(light, cam.x, cam.y);
-    // Halos: light scattering in the air, much stronger in rain and fog
-    const airy = wx.kind === 'fog' ? 0.6 : wx.kind === 'rain' || wx.kind === 'storm' ? 0.45 : wx.kind === 'snow' ? 0.35 : 0.08;
-    const haloA = (0.08 + airy * wx.k) * (0.3 + 0.7 * dark) + (wx.kind === 'clear' ? 0.08 * dark : 0);
+    // Halos: light scattering in the air, much stronger in rain and fog. Indoors it is
+    // only dust and smoke, so a faint bloom around the lamps.
+    const airy = indoor ? 0.1 : wx.kind === 'fog' ? 0.6 : wx.kind === 'rain' || wx.kind === 'storm' ? 0.45 : wx.kind === 'snow' ? 0.35 : 0.08;
+    const haloA = indoor ? 0.1 + 0.08 * dark : (0.08 + airy * wx.k) * (0.3 + 0.7 * dark) + (wx.kind === 'clear' ? 0.08 * dark : 0);
     ctx.globalCompositeOperation = 'screen';
     for (const L of lights) if (!L.win) drawLight(ctx, L.x, L.y, L.r * (0.8 + airy * 0.7), L.color, haloA * L.a, 4, 0.6);
     ctx.globalCompositeOperation = 'source-over';
@@ -134,11 +145,11 @@ export function createRenderer(canvas) {
     if (!hidePlayers) {
       const sorted = [...players].filter(p => p.loc === 'lake').sort((a, b) => a.boat.y - b.boat.y);
       for (const p of sorted) drawBoat(ctx, state, p, clock, reduceMotion);
-      for (const p of sorted) if (p.fishing) drawFishing(ctx, state, p, pane.cam, pane.w, pane.h, clock, reduceMotion);
+      for (const p of sorted) if (p.fishing) drawFishing(ctx, state, p, pane.cam, pane.vw, pane.vh, clock, reduceMotion);
     }
     drawFx('lake');
     lightPass(pane, state, lights.concat(ambientLights()), lightLvl, wx);
-    const wr = { x: pane.cam.x, y: pane.cam.y, w: pane.w, h: pane.h };
+    const wr = { x: pane.cam.x, y: pane.cam.y, w: pane.vw, h: pane.vh };
     wfx.draw(ctx, wr, state, (x, y) => lakeNorm(x + pane.cam.x, y + pane.cam.y) < 1);
     wfx.haze(ctx, wr, state, lightLvl);
   }
@@ -148,12 +159,15 @@ export function createRenderer(canvas) {
     for (const f of fx) if (f.world === world) { ctx.globalAlpha = Math.min(1, f.life * 2); px(f.x, f.y, f.s, f.s, f.color); }
     ctx.globalAlpha = 1;
   }
-  function drawPopups(world, cam) {
+  /** Floating text, drawn in screen space (after the pane transform) so the font stays crisp. */
+  function drawPopups(world, pane) {
+    const sx = x => pane.x + (x - pane.cam.x) * pane.zoom, sy = y => pane.y + (y - pane.cam.y) * pane.zoom;
     for (const q of popups) if (q.world === world) {
       const rise = (q.max - q.life) * 12;
+      const x = clamp(sx(q.x), pane.x + 6 + textWidth(q.text) / 2, pane.x + pane.w - 6 - textWidth(q.text) / 2), y = sy(q.y - rise);
       ctx.globalAlpha = Math.min(1, q.life * 3);
-      text(ctx, q.text, q.x, q.y - rise, { color: q.color, align: 'center', scale: q.big ? 2 : 1 });
-      if (q.sub) text(ctx, q.sub, q.x, q.y - rise + (q.big ? 16 : 10), { color: '#e8e2d2', align: 'center' });
+      text(ctx, q.text, x, y, { color: q.color, align: 'center', scale: q.big ? 2 : 1 });
+      if (q.sub) text(ctx, q.sub, x, y + (q.big ? 16 : 10), { color: '#e8e2d2', align: 'center' });
     }
     ctx.globalAlpha = 1;
   }
@@ -175,7 +189,14 @@ export function createRenderer(canvas) {
 
   function onEvent(ev, state) {
     const p = state.players[ev.seat], b = p?.boat, wk = p?.walk;
+    // Town popups follow the walker whether it is on the street or inside a room
+    const tw = p?.loc === 'room' ? `room:${p.room}` : 'town';
     switch (ev.n) {
+      case 'enter': case 'talk': {
+        const q = roomPopup(state, ev, clock);
+        if (q) popup(`room:${ev.room}`, q.x, q.y, q.text, q.color || '#e8e2d2', q.life || 2.6, false, q.sub || null);
+        break;
+      }
       case 'splash': burst('lake', ev.x, ev.y, 10, ['#e9f1f4', '#b9cdd6'], 30, 90); break;
       case 'bite': burst('lake', ev.x, ev.y, 6, ['#ffffff'], 25, 80); break;
       case 'hooked': if (b) popup('lake', b.x, b.y - 30, 'Hooked!', '#f2c14e'); break;
@@ -191,9 +212,9 @@ export function createRenderer(canvas) {
         break;
       }
       case 'holdfull': if (b) popup('lake', b.x, b.y - 30, 'Hold full', '#e0685a', 1.2); break;
-      case 'sold': if (wk) { popup('town', wk.x, TOWN.ground - 44, `+${ev.value} g`, '#8fd47f', 1.8, true); burst('town', wk.x, TOWN.ground - 30, 16, ['#f2c14e', '#ffe27a'], 50, 120); } break;
-      case 'buy': if (wk) popup('town', wk.x, TOWN.ground - 44, ev.label, '#f2c14e', 1.6); break;
-      case 'nope': if (wk) popup('town', wk.x, TOWN.ground - 44, 'Not enough gold', '#e0685a', 1.2); break;
+      case 'sold': if (wk) { popup(tw, wk.x, TOWN.ground - 44, `+${ev.value} g`, '#8fd47f', 1.8, true); burst(tw, wk.x, TOWN.ground - 30, 16, ['#f2c14e', '#ffe27a'], 50, 120); } break;
+      case 'buy': if (wk) popup(tw, wk.x, TOWN.ground - 44, ev.label, '#f2c14e', 1.6); break;
+      case 'nope': if (wk) popup(tw, wk.x, TOWN.ground - 44, 'Not enough gold', '#e0685a', 1.2); break;
       case 'thunder': if (!reduceMotion) shake = 3; break;
     }
   }
@@ -228,7 +249,7 @@ export function createRenderer(canvas) {
       text(ctx, p.name, pane.x + 6, fy + 4, { color: p.color });
       const holdCol = p.hold.length >= gear.cap ? '#e0685a' : '#98a4b2';
       text(ctx, `hold ${p.hold.length}/${gear.cap}`, pane.x + pane.w / 2, fy + 4, { color: holdCol, align: 'center' });
-      const prompt = p.loc === 'lake' && !p.fishing ? `${solo ? 'Space' : 'A'}: ${p.prompt}` : p.fishing?.stage === 'bite' ? 'HOOK!' : p.fishing?.stage === 'reel' ? (p.fishing.tug?.phase === 'open' ? 'PULL!' : 'hold to lift') : p.fishing?.stage === 'charging' ? 'release' : p.menu ? '' : p.loc === 'town' && p.near ? `${solo ? 'Space' : 'A'}: ${p.prompt}` : '';
+      const prompt = p.loc === 'lake' && !p.fishing ? `${solo ? 'Space' : 'A'}: ${p.prompt}` : p.fishing?.stage === 'bite' ? 'HOOK!' : p.fishing?.stage === 'reel' ? (p.fishing.tug?.phase === 'open' ? 'PULL!' : 'hold to lift') : p.fishing?.stage === 'charging' ? 'release' : p.menu || p.door ? '' : p.loc !== 'lake' && p.near ? `${solo ? 'Space' : 'A'}: ${p.prompt}` : '';
       text(ctx, prompt, pane.x + pane.w - 6, fy + 4, { color: prompt.endsWith('!') ? '#f2c14e' : '#e8e2d2', align: 'right' });
     }
   }
@@ -251,35 +272,66 @@ export function createRenderer(canvas) {
 
     const active = hidePlayers ? [] : players;
     const allLake = active.every(p => p.loc === 'lake');
+    // Two boats share one view while they fit in it; split when they drift apart and
+    // rejoin once they are well inside again, so the screen does not flicker.
+    if (allLake && active.length > 1) {
+      const xs = active.map(p => p.boat.x), ys = active.map(p => p.boat.y);
+      const spanX = Math.max(...xs) - Math.min(...xs), spanY = Math.max(...ys) - Math.min(...ys);
+      const vw = W / ZOOM, vh = H / ZOOM;
+      if (!lakeSplit && (spanX > vw - 70 || spanY > vh - 70)) lakeSplit = true;
+      if (lakeSplit && spanX < vw - 150 && spanY < vh - 120) lakeSplit = false;
+    } else lakeSplit = false;
     const panes = [];
-    if (allLake || active.length === 0) panes.push({ x: 0, y: 0, w: W, h: H, world: 'lake', player: active[0] || null, cam: { x: 0, y: 0 }, shared: true });
-    else active.forEach((p, i) => {
-      const pw = Math.floor(W / active.length), x = i * pw;
-      const cam = p.loc === 'lake'
-        ? { x: Math.max(0, Math.min(W - pw, R(p.boat.x - pw / 2))), y: 0 }
-        : { x: Math.max(0, Math.min(TOWN.w - pw, R(p.walk.x - pw / 2))), y: 0 };
-      panes.push({ x, y: 0, w: pw, h: H, world: p.loc, player: p, cam });
+    const lakeCam = (cx, cy, vw, vh) => ({ x: clamp(R(cx - vw / 2), 0, W - vw), y: clamp(R(cy - vh / 2), 0, H - vh) });
+    if (active.length === 0) {
+      const vw = W / ZOOM, vh = H / ZOOM;
+      panes.push({ x: 0, y: 0, w: W, h: H, vw, vh, zoom: ZOOM, world: 'lake', player: null, cam: lakeCam(W / 2, H / 2 + 6, vw, vh), shared: true });
+    } else if (allLake && !lakeSplit) {
+      const vw = W / ZOOM, vh = H / ZOOM;
+      const cx = active.reduce((s, p) => s + p.boat.x, 0) / active.length, cy = active.reduce((s, p) => s + p.boat.y, 0) / active.length;
+      panes.push({ x: 0, y: 0, w: W, h: H, vw, vh, zoom: ZOOM, world: 'lake', player: active[0], cam: lakeCam(cx, cy, vw, vh), shared: true });
+    } else active.forEach((p, i) => {
+      const pw = Math.floor(W / active.length), x = i * pw, zoom = p.loc === 'room' ? ROOM_ZOOM : ZOOM, vw = pw / zoom, vh = H / zoom;
+      let cam;
+      if (p.loc === 'lake') cam = lakeCam(p.boat.x, p.boat.y, vw, vh);
+      else if (p.loc === 'room') { const rm = ROOMS[p.room]; cam = { x: clamp(R(p.walk.x - vw / 2), 0, Math.max(0, rm.w - vw)), y: H - vh }; }
+      else cam = { x: clamp(R(p.walk.x - vw / 2), 0, TOWN.w - vw), y: H - vh };
+      panes.push({ x, y: 0, w: pw, h: H, vw, vh, zoom, world: p.loc, player: p, cam });
     });
 
     for (const pane of panes) {
       ctx.save();
       ctx.beginPath(); ctx.rect(pane.x, pane.y, pane.w, pane.h); ctx.clip();
-      ctx.translate(pane.x - pane.cam.x, pane.y - pane.cam.y);
+      ctx.translate(pane.x, pane.y); ctx.scale(pane.zoom, pane.zoom); ctx.translate(-pane.cam.x, -pane.cam.y);
+      const G = { ctx, clock, reduceMotion, light: lightLvl, wx, season, wfx };
+      const wr = { x: pane.cam.x, y: pane.cam.y, w: pane.vw, h: pane.vh };
+      let world = 'lake';
       if (pane.world === 'lake') {
         drawLake(state, pane, pane.shared ? active : [pane.player], hidePlayers, lightLvl, wx);
-        drawPopups('lake');
+      } else if (pane.world === 'room') {
+        const p = pane.player, others = active.filter(q => q !== p && q.loc === 'room' && q.room === p.room);
+        world = `room:${p.room}`;
+        drawRoom(G, state, p, pane.cam, pane.vw, pane.vh, others);
+        drawFx(world);
+        lightPass(pane, state, roomLights(G, state, p, pane.cam, pane.vw), lightLvl, wx, true);
       } else {
-        const G = { ctx, clock, reduceMotion, light: lightLvl, wx, season, wfx };
-        drawTown(G, state, pane.player, pane.cam, pane.w, pane.h);
+        world = 'town';
+        drawTown(G, state, pane.player, pane.cam, pane.vw, pane.vh);
         drawFx('town');
-        lightPass(pane, state, townLights(G, state, pane.player, pane.cam, pane.w), lightLvl, wx);
-        const wr = { x: pane.cam.x, y: pane.cam.y, w: pane.w, h: pane.h };
-        wfx.draw(ctx, wr, state, (x, y) => x + pane.cam.x < 120 && y > TOWN.ground - 14 && y < TOWN.ground);
+        lightPass(pane, state, townLights(G, state, pane.player, pane.cam, pane.vw), lightLvl, wx);
+        wfx.draw(ctx, wr, state, (x, y) => x + pane.cam.x < 120 && y + pane.cam.y > TOWN.ground - 14 && y + pane.cam.y < TOWN.ground);
         wfx.haze(ctx, wr, state, lightLvl);
-        drawPopups('town');
-        if (pane.player.menu) drawMenu(G, state, pane.player, pane.cam, pane.w, pane.h);
+      }
+      // Doorway: dip to black and back while the player crosses the threshold
+      const d = pane.player?.door;
+      if (d) {
+        const t = d.t / 0.9, a = t < 0.4 ? t / 0.4 : t < 0.55 ? 1 : 1 - (t - 0.55) / 0.45;
+        ctx.fillStyle = `rgba(4,5,8,${clamp(a, 0, 1)})`; ctx.fillRect(pane.cam.x - 2, pane.cam.y - 2, pane.vw + 4, pane.vh + 4);
       }
       ctx.restore();
+      // Text and menus sit on top of the pane in screen pixels
+      drawPopups(world, pane);
+      if (pane.player?.menu && pane.world !== 'lake') drawMenu(G, state, pane.player, { x: pane.x, y: pane.y }, pane.w, pane.h);
       if (panes.length > 1 && pane.x > 0) px(pane.x - 1, 0, 2, H, '#07080c');
     }
     ctx.globalCompositeOperation = 'multiply';

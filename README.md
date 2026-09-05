@@ -12,7 +12,9 @@ There is also a single-player mode played on the host screen with keyboard and m
 The look is night-film pixel art: a 640x360 canvas drawn entirely in code (no image
 files), lit by a multiply light map with warm lantern pools, halos in the rain and fog,
 reflections on wet ground and water, and a vignette over everything. Text on the canvas
-is a hand-drawn 5x7 bitmap font.
+is a hand-drawn 5x7 bitmap font. The camera sits a quarter closer than the canvas and
+follows your boat or walker (and comes in a little further indoors); two boats share one
+view until they drift apart, then the screen splits.
 
 **Weather** rolls in and out on its own: clear, overcast, rain, storm, fog and snow, with
 odds that depend on the season. It is part of the shared game state, so it is saved with
@@ -33,7 +35,7 @@ scan the QR or type the code on their phone. When everyone taps *I'm ready*, pre
 - Big button: cast (hold to charge, release to throw), hook when the bobber dips,
   hold to lift the catch zone while reeling, dock, enter a shop, select
 - Pull: tap when the fish tugs and *Pull!* appears. Tapping at other times adds tension.
-- Back: reel in an idle line, close a shop
+- Back: reel in an idle line, close a shop, leave a room
 
 **Reeling:** keep the fish inside your coloured zone. Holding lifts the zone, releasing
 lets it sink. Inside the zone the green bar fills and tension eases; outside it the red
@@ -43,6 +45,17 @@ tap once.
 **Town:** dock at the pier, walk right. Fishmonger buys the whole hold. Tackle shop sells
 rods, line and bait (bait comes in packs of ten, one per cast; worms are free forever).
 Boatyard sells boats, engines and storage. Walk back to the pier to sail.
+
+**Inside:** every door on the street opens. Press the big button at a shop door to step
+through (a short fade, a bell) into a walkable room; walk to the counter and press it
+again for the shop menu, or press Back or walk to the door to leave. The four houses
+open too, and their residents will talk. The rooms are live: windows show the real sky
+and weather (rain on the glass, snow on the sills, storm flashes), daylight falls in
+shafts and lamps take over at dusk, stoves and hearths light when it is cold or dark,
+clocks keep game time, and the shops show what you own. The tackle wall racks the rods
+you have bought and tags the next one with its price, the bait pegs mark what is in your
+tin, the boatyard hull on the trestles is your current boat, and the fishmonger lays
+your last sale out on the ice. After ten at night the houses are asleep.
 
 **Single player:** choose *Single player* on the host screen. WASD or arrows to move,
 Space for the big button (hold for cast and reel), E or right mouse button to pull, Esc
@@ -114,11 +127,14 @@ js/host/              TV: loop, audio, saves, keyboard for solo mode, and the re
   gfx.js                bitmap font, light sprites, dither, palette maths, vignette
   lake.js               baked terrain per season, water, boats, fishing overlays, lake lights
   town.js               baked street facades, sky and hills, wet road, walker, shop menu
+  room.js               interiors: baked rooms, window weather, lamps and fires, keepers
   weatherfx.js          rain, snow, fog wisps, cloud shadows
   render.js             panes, light pass, halos, particles, popups, HUD
 js/client/            phone: joystick, controller UI
 
 For tuning there is a debug hook on the host: `LL.state`, `LL.renderer`, and
-`LL.jump({ day, minute, weather, loc })` from the browser console jumps the lake to any
-time, season, weather (`clear`, `overcast`, `rain`, `storm`, `fog`, `snow`) or place.
+`LL.jump({ day, minute, weather, loc, room })` from the browser console jumps the lake to
+any time, season, weather (`clear`, `overcast`, `rain`, `storm`, `fog`, `snow`) or place
+(`loc` is `lake`, `town` or `room`; `room` is `fishmonger`, `tackle`, `boatyard` or
+`house1` to `house4`).
 ```
