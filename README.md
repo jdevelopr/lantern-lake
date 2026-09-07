@@ -165,7 +165,7 @@ js/host/              TV: loop, audio, saves, keyboard for solo mode, and the re
 js/client/            phone: joystick, controller UI
 
 The art style is picked on the title screen (or with `?style=storybook|harbour|north`,
-or `LL.style('harbour')` from the console) and remembered on that TV. Every sprite is a
+or `LL.style('harbour')` from the console) and remembered on that TV. Moody harbour is the default. Every sprite is a
 text pixel map, so a window or a hat can be edited by hand in the art files.
 
 For tuning there is a debug hook on the host: `LL.state`, `LL.renderer`, and

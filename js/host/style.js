@@ -1,6 +1,7 @@
-// Art direction switch. Two complete looks for the town and everyone in it share one
-// renderer; the style picks proportions, palettes and materials. Chosen with
-// ?style=storybook | harbour, remembered in localStorage, or LL.style('harbour').
+// Art direction switch. Three complete looks for the town and everyone in it share one
+// renderer; the style picks the character sheet, the town kit and the interior materials.
+// Chosen on the title screen, with ?style=storybook | harbour | north, remembered in
+// localStorage, or LL.style('harbour'). Moody harbour is the default.
 export const STYLES = {
   storybook: {
     name: 'Cosy storybook',
@@ -49,9 +50,9 @@ export const STYLES = {
 let current = null;
 export function getStyle() {
   if (current) return current;
-  let key = 'storybook';
+  let key = 'harbour';
   try { key = new URLSearchParams(location.search).get('style') || localStorage.getItem('ll-style') || key; } catch {}
-  current = STYLES[key] ? key : 'storybook';
+  current = STYLES[key] ? key : 'harbour';
   return current;
 }
 export function setStyle(key) {
