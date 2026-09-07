@@ -338,3 +338,6 @@ body[data-screen="game"]:not(.is-host) #intro-players { display: none; }
     transition-duration: 0.01ms !important;
   }
 }
+
+.style-row { display: flex; gap: 10px; align-items: center; justify-content: center; margin: 6px 0 2px; color: #b9c3cf; font-size: 14px; }
+.style-row select { padding: 6px 10px; }

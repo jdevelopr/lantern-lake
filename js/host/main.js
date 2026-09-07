@@ -12,6 +12,7 @@ import { createRenderer } from './render.js';
 import { saveGame, loadGame, deleteGame, listGames } from './save.js';
 import { sfx, unlockAudio, setAmbience } from './audio.js';
 import { ambienceFor } from './room.js';
+import { setStyle, getStyle, STYLES } from './style.js';
 import { createLocalInput } from './input.js';
 
 const $ = s => document.querySelector(s);
@@ -58,6 +59,8 @@ export function start() {
 
   $('#new-btn').onclick = () => { unlockAudio(); startHost(null, null); };
   $('#solo-btn').onclick = () => { unlockAudio(); startSolo(null); };
+  const styleSel = $('#style-sel');
+  if (styleSel) { styleSel.value = getStyle(); styleSel.onchange = () => setStyle(styleSel.value); }
   $('#join-form').onsubmit = e => {
     e.preventDefault();
     const c = $('#join-code').value.trim().toUpperCase();
@@ -249,6 +252,7 @@ function loop(now) {
 // 'river' | 'ocean' (the boat appears at that water's entry).
 window.LL = {
   get state() { return state; }, get renderer() { return renderer; },
+  style(key) { return key ? setStyle(key) : getStyle(); }, get styles() { return Object.keys(STYLES); },
   jump({ day, minute, weather, loc, room, water } = {}) {
     if (day !== undefined) state.time.day = day;
     if (minute !== undefined) state.time.minute = minute;

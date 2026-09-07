@@ -2,7 +2,7 @@
 import { DAY_MINUTES, SEASON_DAYS } from '../shared/protocol.js';
 
 export const WORLD = { w: 640, h: 360 };
-export const TOWN = { w: 960, h: 360, ground: 296 };
+export const TOWN = { w: 1280, h: 360, ground: 296, square: { x0: 520, x1: 760, well: 640 } };
 
 // The lake is an ellipse whose radius wobbles with the angle: layered sine lobes give
 // a bay to the north-east, a broad western shore and a point to the south-east.
@@ -26,18 +26,20 @@ export const REEDS = [
 // Pier sticks out from the south shore; boats dock at its tip.
 export const DOCK = { x: 170, y: 282, r: 24, pierX: 164, pierTop: 290, pierBottom: 332, spawn: { x: 170, y: 262 } };
 
-// Town buildings along a single street. x is the door centre.
-// Shops have a facade width; houses are the filler facades in town.js (w: 0 here) whose
-// front door the walker can also use. `house` entries have a resident instead of a menu.
+// The town: a harbour front by the pier, a street of shops and houses, a square with a
+// well in the middle, a chapel, and a lane that ends at a fence. x is the door centre
+// (gameplay); cx and w are the facade the renderer draws. `house` entries have a
+// resident instead of a menu; `filler` entries are scenery only.
 export const BUILDINGS = [
-  { id: 'dock',       x: 70,  w: 0,   label: 'To the lake' },
-  { id: 'house1',     x: 216, w: 0,   label: "Marla's house",   house: true },
-  { id: 'fishmonger', x: 330, w: 120, label: 'Fishmonger', color: '#7f9cc0', roof: '#4d6a8f' },
-  { id: 'house2',     x: 463, w: 0,   label: 'The Okafors',     house: true },
-  { id: 'tackle',     x: 560, w: 140, label: 'Tackle',     color: '#c58a5a', roof: '#8a5a3a' },
-  { id: 'house3',     x: 693, w: 0,   label: "Bram's cottage",  house: true },
-  { id: 'boatyard',   x: 810, w: 160, label: 'Boatyard',   color: '#a8b4a0', roof: '#5f6f5a' },
-  { id: 'house4',     x: 939, w: 0,   label: 'The Reyes home',  house: true },
+  { id: 'dock',       x: 70,   w: 0,   label: 'To the lake' },
+  { id: 'boatyard',   x: 236,  cx: 200,  w: 170, label: 'Boatyard',   color: '#a8b4a0', roof: '#5f6f5a' },
+  { id: 'fishmonger', x: 380,  cx: 370,  w: 110, label: 'Fishmonger', color: '#7f9cc0', roof: '#4d6a8f' },
+  { id: 'house1',     x: 486,  cx: 478,  w: 62,  label: "Marla's house",   house: true },
+  { id: 'house2',     x: 792,  cx: 798,  w: 66,  label: 'The Okafors',     house: true },
+  { id: 'tackle',     x: 900,  cx: 900,  w: 130, label: 'Tackle',     color: '#c58a5a', roof: '#8a5a3a' },
+  { id: 'house3',     x: 1010, cx: 1014, w: 64,  label: "Bram's cottage",  house: true },
+  { id: 'chapel',     x: 1100, cx: 1100, w: 76,  label: '', filler: true },
+  { id: 'house4',     x: 1192, cx: 1198, w: 68,  label: 'The Reyes home',  house: true },
 ];
 export const BUILDING_BY_ID = Object.fromEntries(BUILDINGS.map(b => [b.id, b]));
 

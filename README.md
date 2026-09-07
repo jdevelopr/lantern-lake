@@ -149,12 +149,24 @@ js/host/              TV: loop, audio, saves, keyboard for solo mode, and the re
   gfx.js                bitmap font, light sprites, dither, palette maths, vignette
   lake.js               baked terrain per season, water, boats, fishing overlays, lake lights
   waters.js             the river and the sea: banks, rapids, swell, reef, lighthouse beam
-  town.js               baked street facades, sky and hills, wet road, walker, shop menu
-  room.js               interiors: baked rooms, window weather, lamps and fires, keepers
-  figure.js             people and animals: walker, keepers, residents, sitting, sleeping
+  style.js              the three art styles (cosy storybook, moody harbour, snowbound north)
+  town.js               sky and hills, wet road, window glow, walker, shop menu
+  room.js               interiors: window weather, lamps and fires, keepers, talk
+  figure.js             people and animals, assembled from the hand-drawn sheets in art/
+  art/px.js             pixel maps: sprites drawn as text, one character per pixel
+  art/people-*.js       character sheets per style: walk cycles, hats, hair, beards, kids, cats
+  art/kit.js            roof slopes, gables, snow caps, icicles, tiled fills
+  art/kit-*.js          town parts per style: walls, roofs, windows, doors, signs, props
+  art/townbake.js       the town layout: quay, boatyard, shops, square, chapel, lane
+  art/fixtures.js       interior furniture and props
+  art/rooms.js          the seven rooms, per style
   weatherfx.js          rain, snow, fog wisps, cloud shadows
   render.js             panes, light pass, halos, particles, popups, HUD
 js/client/            phone: joystick, controller UI
+
+The art style is picked on the title screen (or with `?style=storybook|harbour|north`,
+or `LL.style('harbour')` from the console) and remembered on that TV. Every sprite is a
+text pixel map, so a window or a hat can be edited by hand in the art files.
 
 For tuning there is a debug hook on the host: `LL.state`, `LL.renderer`, and
 `LL.jump({ day, minute, weather, loc, room, water })` from the browser console jumps the lake to

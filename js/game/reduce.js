@@ -250,7 +250,7 @@ function tickLake(state, p, edge, gear, dt) {
 
 function nearestBuilding(x) {
   let best = null, bd = 26;
-  for (const b of BUILDINGS) { const d = Math.abs(b.x - x); if (d < bd) { bd = d; best = b; } }
+  for (const b of BUILDINGS) { if (b.filler) continue; const d = Math.abs(b.x - x); if (d < bd) { bd = d; best = b; } }
   return best;
 }
 
